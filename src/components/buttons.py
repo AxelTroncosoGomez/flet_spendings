@@ -23,7 +23,7 @@ class ImageButtonComponent(ft.Container):
 			width = 350,
 			content=ft.Row(
 				[
-					ft.VerticalDivider(width=1, color="transparent"),
+					# ft.VerticalDivider(width=1, color="transparent"),
 					ft.Image(
 						src=self.src_image,
 						width=24,
@@ -33,7 +33,7 @@ class ImageButtonComponent(ft.Container):
 					ft.Text(self.text, size=15, color="black"),
 				],
 				spacing=15,
-				alignment=ft.MainAxisAlignment.START,
+				alignment=ft.MainAxisAlignment.CENTER,
 			),
 			on_click = self.trigger
 		)

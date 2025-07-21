@@ -19,11 +19,14 @@ class SpendingsPage(ft.View):
 			route="/spendings",
 			horizontal_alignment=ft.CrossAxisAlignment.CENTER,
 		)
-		self.page = page
-		self.user_id = self.page.session.get("user_id")
-		logger.debug(f"User ID: {self.user_id}")
 
-		self.database = LocalSpendingsDatabase("spendings.db", self.user_id)
+		self.page = page
+		self.supabase_service = SpendingsSupabaseDatabase()
+		
+		self.current_user_id = self.page.session.get("current_user_id")
+		logger.debug(f"User ID: {self.current_user_id}")
+
+		self.database = LocalSpendingsDatabase("spendings.db", self.current_user_id)
 		self.database.connect()
 		self.database.create_or_open()
 

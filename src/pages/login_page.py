@@ -2,6 +2,8 @@ import flet as ft
 from utils.logger import logger
 from components.inputs import InputComponent
 from components.buttons import ButtonComponent, ImageButtonComponent
+from services.supabase_service import SpendingsSupabaseDatabase
+from icecream import ic
 
 class LoginPage(ft.View):
 
@@ -12,18 +14,19 @@ class LoginPage(ft.View):
 		)
 
 		self.page = page
+		self.supabase_service = SpendingsSupabaseDatabase()
 
-		self.username_input = InputComponent(
-			icon = ft.Icons.PERSON_ROUNDED,
-			label = "Username",
-			value = "admin",
+		self.email_input = InputComponent(
+			icon = ft.Icons.EMAIL,
+			label = "Email",
+			# value = "admin",
 			password = False
 		)
 
 		self.password_input = InputComponent(
 			icon = ft.Icons.LOCK,
 			label = "Password",
-			value = "admin",
+			# value = "admin",
 			password = True
 		)
 
@@ -37,21 +40,21 @@ class LoginPage(ft.View):
 			color = "white",
 			text = "Continue with Google",
 			src_image = "google_logo.svg",
-			trigger = lambda _: logger.debug("Google Login!")
+			trigger = self.handle_google_login
 		)
 
 		self.linkedin_login_btn = ImageButtonComponent(
 			color = "white",
 			text = "Continue with Linkedin",
 			src_image = "linkedin_logo.svg",
-			trigger = lambda _: logger.debug("Linkedin Login!")
+			trigger = self.handle_linkedin_login
 		)
 
 		self.microsoft_login_btn = ImageButtonComponent(
 			color = "white",
 			text = "Continue with Microsoft",
 			src_image = "microsoft_logo.svg",
-			trigger = lambda _: logger.debug("Microsoft Login!")
+			trigger = self.handle_microsoft_login
 		)
 
 		self.controls = [
@@ -74,11 +77,15 @@ class LoginPage(ft.View):
 									content=ft.Column(
 										horizontal_alignment=ft.CrossAxisAlignment.CENTER,
 										alignment=ft.MainAxisAlignment.CENTER,
-										spacing = 15,
+										spacing = 10,
 										controls=[
-											ft.Text("Welcome user", size=20),
-											ft.Divider(height=30,color="transparent"),
-											self.username_input,
+										    ft.Image(
+										        src="dummy_logo_light.png",
+										        width=150,
+										    ),
+											ft.Text("Welcome to DummyDev", size=20),
+											ft.Divider(height = 10,color="transparent"),
+											self.email_input,
 											self.password_input,
 											ft.Container(
 												content = ft.Row([
@@ -97,7 +104,6 @@ class LoginPage(ft.View):
 												alignment = ft.MainAxisAlignment.END
 												),
 											),
-											ft.Divider(height=15,color="transparent"),
 											self.login_btn,
 											ft.Text(
 												spans=[
@@ -112,9 +118,9 @@ class LoginPage(ft.View):
 													),
 												]
 											),
-											ft.Divider(height=10,color="transparent"),
+											ft.Divider(height=5,color="transparent"),
 											ft.Divider(height=9, thickness=2),
-											ft.Divider(height=10,color="transparent"),
+											ft.Divider(height=5,color="transparent"),
 											ft.Text("Or sign up using", size=13),
 											self.google_login_btn,
 											self.microsoft_login_btn,
@@ -131,13 +137,23 @@ class LoginPage(ft.View):
 
 	def handle_user_login(self, e):
 		logger.debug("Logged successfully!!!")
-		logger.debug(f"Username: {self.username_input.input_value}")
+		logger.debug(f"Username: {self.email_input.input_value}")
 		logger.debug(f"Password: {self.password_input.input_value}")
 
-		if self.username_input.input_value == "admin" and self.password_input.input_value == "admin":
-			# Go to view "/spendings"
-			self.page.session.set("user_id", "admin")
-			self.page.go("/spendings")
+		try:
+			response = self.supabase_service.handle_login(
+				user_email = self.email_input.input_value, 
+				user_password = self.password_input.input_value
+			)
+			ic(response)
+			self.page.session.set("current_user_id", response.user.id)
+			logger.debug(f"Login with ID: {response.user.id}")
+
+		except Exception as err:
+			logger.error(f"Error during registration: {err}")
+			self.page.snack_bar = ft.SnackBar(ft.Text("Login failed. Try again."))
+			self.page.snack_bar.open = True
+			self.page.update()
 
 	def go_to_sign_up(self, e):
 		logger.debug("Sign up!")
@@ -146,3 +162,12 @@ class LoginPage(ft.View):
 	def go_to_forgot_password(self, e):
 		logger.debug("Going to Forgot Password Page ...")
 		self.page.go("/forgotpassword")
+
+	def handle_google_login(self, e):
+		logger.debug("Login with Google")
+
+	def handle_linkedin_login(self, e):
+		logger.debug("Login with Linkedin")
+
+	def handle_microsoft_login(self, e):
+		logger.debug("Login with Microsoft")

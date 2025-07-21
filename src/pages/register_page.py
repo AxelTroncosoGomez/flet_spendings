@@ -72,6 +72,10 @@ class RegisterPage(ft.View):
 										alignment=ft.MainAxisAlignment.CENTER,
 										spacing = 15,
 										controls=[
+										    ft.Image(
+										        src="dummy_logo_light.png",
+										        width=150,
+										    ),										
 											ft.Text("Create an account", size=20),
 											ft.Divider(height=10,color="transparent"),
 											self.email_input,
@@ -108,51 +112,39 @@ class RegisterPage(ft.View):
 	def handle_user_register(self, e):
 		logger.debug("Register a user !!!")
 
-		email = self.email_input.input_value
-		username = self.username_input.input_value
-		password = self.password_input.input_value
+		# self.page.session.set("current_register_email", email)
+		# self.page.session.set("current_register_username", username)
+		# self.page.session.set("current_register_password", password)
 
-		self.page.session.set("current_register_email", email)
-		self.page.session.set("current_register_username", username)
-		self.page.session.set("current_register_password", password)
+		logger.debug(f"User email: {self.email_input.input_value}")
+		logger.debug(f"User username: {self.username_input.input_value}")		
+		logger.debug(f"User password: {self.password_input.input_value}")
 
-		self.page.launch_url("https://yourusername.github.io/forgot", web_popup_window=True)
+		# self.page.launch_url("https://yourusername.github.io/forgot", web_popup_window=True)
 
-		# try:
-		# 	response = self.supabase_service.supabase_client.auth.sign_up({
-		# 		"email": email,
-		# 		"password": password,
-		# 		"options": {
-		# 			"email_redirect_to": "https://axeltroncosogomez.github.io/verify",
-		# 			"data": {
-		# 				"username": username,
-		# 				"verified": False
-		# 			}
-		# 		}
-		# 	})
+		try:
+			response = self.supabase_service.handle_registration(
+				username = self.username_input.input_value,
+				user_email = self.email_input.input_value,
+				user_password = self.password_input.input_value
+			)
 
-		# 	user_id = response.user.id
-		# 	self.page.session.set("current_register_user_id", user_id)
+			user_id = response.user.id
+			self.page.session.set("current_register_user_id", user_id)
+			logger.debug(f"Register new User ID: {user_id}")
 
-		# 	# Step 1: Prompt user to check their email
-		# 	self.page.snack_bar = ft.SnackBar(ft.Text("Check your email to verify account."))
-		# 	self.page.snack_bar.open = True
-		# 	self.page.update()
+			self.page.snack_bar = ft.SnackBar(ft.Text("Registration Sucessfully!"))
+			self.page.snack_bar.open = True
+			self.page.update()
 
-		# 	# Step 2: Open verification page in browser
-		# 	# webbrowser.open("https://axeltroncosogomez.github.io/verify")
+			# webbrowser.open("https://axeltroncosogomez.github.io/verify")
+			self.page.go("/verify")
 
-		# 	# Step 3: Go to a verification waiting page inside app
-		# 	# self.page.go("/verify")
-
-		# except Exception as e:
-		# 	logger.error(f"Error during registration: {e}")
-		# 	self.page.snack_bar = ft.SnackBar(ft.Text("Registration failed. Try again."))
-		# 	self.page.snack_bar.open = True
-		# 	self.page.update()
-
-
-
+		except Exception as e:
+			logger.error(f"Error during registration: {e}")
+			self.page.snack_bar = ft.SnackBar(ft.Text("Registration failed. Try again."))
+			self.page.snack_bar.open = True
+			self.page.update()
 
 	def check_username_already_in_use(self):
 		...
@@ -161,8 +153,4 @@ class RegisterPage(ft.View):
 		...
 
 	def go_to_login(self, e):
-		logger.debug("Sign up!")
 		self.page.go("/login")
-
-	# def go_to_forgot_password(self, e):
-	# 	logger.debug("Going to Forgot Password Page ...")

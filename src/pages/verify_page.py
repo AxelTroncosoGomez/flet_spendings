@@ -18,22 +18,28 @@ class VerifyEmailPage(ft.View):
 		self.page = page
 		self.supabase_service = SpendingsSupabaseDatabase()
 
-		self.current_register_email = self.page.session.get("current_register_email")
-		self.current_register_username = self.page.session.get("current_register_username")
-		self.current_register_password = self.page.session.get("current_register_password")
-		self.current_register_user_id = self.page.session.get("current_register_user_id")
+		# self.current_register_email = self.page.session.get("current_register_email")
+		# self.current_register_username = self.page.session.get("current_register_username")
+		# self.current_register_password = self.page.session.get("current_register_password")
+		# self.current_register_user_id = self.page.session.get("current_register_user_id")
 
-		self.webview = fwv.WebView(
-			url="https://axeltroncosogomez.github.io/verify",
-			expand=True,
-			on_page_started=self._handle_token_from_url
+		# self.webview = fwv.WebView(
+		# 	url="https://axeltroncosogomez.github.io/verify",
+		# 	expand=True,
+		# 	on_page_started=self._handle_token_from_url
+		# )
+
+		self.resend_email_button = ButtonComponent(
+			text = "Resend verification email",
+			trigger = self.resend_verification,
+			color = "#8db2dd",
 		)
 
-		# self.resend_email_button = ButtonComponent(
-		# 	text = "Resend verification email",
-		# 	trigger = self.resend_verification,
-		# 	color = "#8db2dd",
-		# )
+		self.email_verifying_text = """
+Welcome to DummyDev, we sent you and email to verify your account. 
+Please check your inbox to be able to Log-in in our App.
+If you don't receive any email, you can resend another one by clickin the button below
+"""
 
 		self.controls = [
 			ft.SafeArea(
@@ -58,12 +64,27 @@ class VerifyEmailPage(ft.View):
 										spacing = 15,
 										controls=[
 											# ft.Text(f"{self.current_register_user_id}", size=18),
-											# ft.Text(f"Welcome {self.current_register_username}", size=20),
-											# ft.Text(f"We send you an email to {self.current_register_email}", size=15),
-											# ft.Text(f"to be able to complete de registration", size=20),
-											# ft.Divider(height=10,color="transparent"),
-											# self.resend_email_button,
-											self.webview
+											ft.Text(self.email_verifying_text, size=15),
+											ft.Divider(height=10,color="transparent"),
+											self.resend_email_button,
+											ft.Container(
+												content = ft.Row([
+													ft.Text(
+														spans=[
+															ft.TextSpan(
+																"← Back to login",
+																style=ft.TextStyle(
+																	color="#8db2dd",
+																	size=15,
+																),
+																on_click=self.go_to_login
+															)
+														]
+													)
+												], 
+												alignment = ft.MainAxisAlignment.CENTER
+												),
+											),
 										]
 									)
 								)
@@ -74,32 +95,32 @@ class VerifyEmailPage(ft.View):
 			)
 		]
 
-	def _handle_token_from_url(self, e):
-		logger.debug("Calling _handle_token_from_url() ...")
-		if "#access_token=" in e.url:
-			try:
-				token = e.url.split("#access_token=")[1].split("&")[0]
-				logger.debug(f"token: {token}")
+	# def _handle_token_from_url(self, e):
+	# 	logger.debug("Calling _handle_token_from_url() ...")
+	# 	if "#access_token=" in e.url:
+	# 		try:
+	# 			token = e.url.split("#access_token=")[1].split("&")[0]
+	# 			logger.debug(f"token: {token}")
 
-				# Optionally decode token (you can use PyJWT for this)
-				decoded = jwt.decode(token, options={"verify_signature": False})
-				logger.info(f"User email verified: {decoded['email']}")
+	# 			# Optionally decode token (you can use PyJWT for this)
+	# 			decoded = jwt.decode(token, options={"verify_signature": False})
+	# 			logger.info(f"User email verified: {decoded['email']}")
 
-				# Save token or mark session
-				self.page.session.set("email_verify_access_token", token)
-				self.page.email_verify_snack_bar = ft.SnackBar(ft.Text("✅ Email verified."))
-				self.page.email_verify_snack_bar.open = True
+	# 			# Save token or mark session
+	# 			self.page.session.set("email_verify_access_token", token)
+	# 			self.page.email_verify_snack_bar = ft.SnackBar(ft.Text("✅ Email verified."))
+	# 			self.page.email_verify_snack_bar.open = True
 
-				# Redirect to login
-				self.page.go("/login")
+	# 			# Redirect to login
+	# 			self.page.go("/login")
 
-			except Exception as err:
-				logger.error(f"Invalid token: {err}")
-				self.page.invalid_token_snack_bar = ft.SnackBar(ft.Text("❌ Invalid token."))
-				self.page.invalid_token_snack_bar.open = True
-				self.page.go("/register")
+	# 		except Exception as err:
+	# 			logger.error(f"Invalid token: {err}")
+	# 			self.page.invalid_token_snack_bar = ft.SnackBar(ft.Text("❌ Invalid token."))
+	# 			self.page.invalid_token_snack_bar.open = True
+	# 			self.page.go("/register")
 
-		self.page.update()
+	# 	self.page.update()
 
 	# def did_mount(self):
 	# 	logger.debug("Starting timer ...")
@@ -111,19 +132,21 @@ class VerifyEmailPage(ft.View):
 	# 	#     self.page.go("/login")
 	# 	logger.debug("Dummy callback")
 
-	# def resend_verification(self, e):
-	# 	logger.debug("resending email...")
+	def resend_verification(self, e):
+		logger.debug("resending email...")
 
-	# 	try:
-	# 		response = self.supabase_service.supabase_client.auth.resend({
-	# 			"type": "signup",
-	# 			"email": self.current_register_email,
-	# 			# "options": {"email_redirect_to": "https://example.com/welcome"}
-	# 		})
-	# 		ic(response)
+		try:
+			response = self.supabase_service.supabase_client.auth.resend({
+				"type": "signup",
+				"email": self.current_register_email,
+				"options": {
+					"email_redirect_to": "https://axeltroncosogomez.github.io/api/flet_spendings/supabase/verify/"
+				}
+			})
+			ic(response)
 
-	# 	except Exception as e:
-	# 		raise
+		except Exception as e:
+			raise
 
-	# def go_to_login(self, e):
-	# 	self.page.go("/login")
+	def go_to_login(self, e):
+		self.page.go("/login")

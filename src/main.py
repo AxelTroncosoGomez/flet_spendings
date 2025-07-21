@@ -19,6 +19,8 @@ import urllib.request
 
 load_dotenv()
 
+# uv export --no-hashes --no-annotate --format requirements.txt > requirements.txt
+
 # Password from Supabase proj
 # gCATA6eaPyZs#rEKQ8^WhERQ3zUxGnTeZ61w42PZ
 
@@ -28,6 +30,7 @@ load_dotenv()
 # lg ≥ 992px
 # xl ≥ 1200px
 # xxl ≥ 1400px
+
 # {"xs": 8,"sm": 8, "md": 8, "lg": 8, "xl": 8, "xxl": 8}
 
 # iPhone 13	               390	844
@@ -92,7 +95,7 @@ def main(page: ft.Page):
 	page.window.on_event = window_event
 	page.scroll = "auto"
 	page.on_route_change = route_change
-	page.go("/register")
+	page.go("/login")
 
 ft.app(
 	target=main,

@@ -54,6 +54,24 @@ class ForgotPasswordPage(ft.View):
 											self.email_input,
 											ft.Divider(height=10,color="transparent"),
 											self.reset_password_button,
+											ft.Container(
+												content = ft.Row([
+													ft.Text(
+														spans=[
+															ft.TextSpan(
+																"← Back to login",
+																style=ft.TextStyle(
+																	color="#8db2dd",
+																	size=15,
+																),
+																on_click=self.go_to_login
+															)
+														]
+													)
+												], 
+												alignment = ft.MainAxisAlignment.CENTER
+												),
+											),
 										]
 									)
 								)
@@ -68,8 +86,18 @@ class ForgotPasswordPage(ft.View):
 		logger.debug("Reseting password ...")
 
 		try:
-			response = self.supabase_service.supabase_client.auth.reset_password_for_email(self.email_input.input_value)
+			response = self.supabase_service.supabase_client.auth.reset_password_for_email(
+				self.email_input.input_value,
+				{
+					"redirect_to": "https://axeltroncosogomez.github.io/api/flet_spendings/supabase/reset_password"
+				}
+			)
 			ic(response)
+
+			self.page.reset_password_snack_bar = ft.SnackBar(ft.Text("An email was send to you to change your password."))
+			self.page.reset_password_snack_bar.open = True
+			self.page.reset_password_snack_bar.update()
+			self.page.update()
 
 		except Exception as e:
 			raise

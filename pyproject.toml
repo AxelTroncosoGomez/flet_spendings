@@ -8,7 +8,13 @@ authors = [
     { name = "Flet developer", email = "you@example.com" }
 ]
 dependencies = [
-  "flet==0.28.2"
+  "faker>=37.4.2",
+  "flet==0.28.2",
+  "flet-webview>=0.1.0",
+  "icecream>=2.1.5",
+  "loguru>=0.7.3",
+  "python-dotenv>=1.1.1",
+  "supabase>=2.17.0",
 ]
 
 [tool.flet]
