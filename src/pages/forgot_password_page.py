@@ -4,17 +4,34 @@ from components.inputs import InputComponent
 from components.buttons import ButtonComponent, ImageButtonComponent
 from services.supabase_service import SpendingsSupabaseDatabase
 from icecream import ic
+from exceptions import (
+	GenericException,
+	WrongCredentialsException,
+	WrongPasswordException,
+	UserAlreadyExistsException,
+	EmailNotConfirmedException,
+	UserNotAllowedException,
+	SupabaseApiException,
+	PasswordNotEqualException,
+	InputNotFilledException,
+	EmailNotValidException
+)
+from components.dialogs import (
+	sucess_message,
+	error_message
+)
 
 class ForgotPasswordPage(ft.View):
 
-	def __init__(self, page: ft.Page):
+	def __init__(self, page: ft.Page, supabase_service):
 		super().__init__(
 			route="/forgotpassword",
 			horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+			scroll=ft.ScrollMode.AUTO
 		)
 
 		self.page = page
-		self.supabase_service = SpendingsSupabaseDatabase()
+		self.supabase_service = supabase_service
 
 		self.email_input = InputComponent(
 			icon = ft.Icons.EMAIL,
@@ -85,22 +102,30 @@ class ForgotPasswordPage(ft.View):
 	def reset_password(self, e):
 		logger.debug("Reseting password ...")
 
+		email = self.email_input.input_value
+
 		try:
-			response = self.supabase_service.supabase_client.auth.reset_password_for_email(
-				self.email_input.input_value,
-				{
-					"redirect_to": "https://axeltroncosogomez.github.io/api/flet_spendings/supabase/reset_password"
-				}
+			if len(email) == 0:
+				raise InputNotFilledException("Please provide an email")
+
+			response = self.supabase_service.handle_reset_password(
+				email
 			)
 			ic(response)
 
-			self.page.reset_password_snack_bar = ft.SnackBar(ft.Text("An email was send to you to change your password."))
-			self.page.reset_password_snack_bar.open = True
-			self.page.reset_password_snack_bar.update()
+			self.page.open(sucess_message("An email was send to you to change your password."))
 			self.page.update()
 
-		except Exception as e:
-			raise
+		except InputNotFilledException as err:
+			self.page.open(error_message(err))
+		except EmailNotValidException as err:
+			# logger.error(type(err).__name__)
+			# logger.error(err)
+			self.page.open(error_message("Invalid email format"))
+		except GenericException as err:
+			self.page.open(error_message(err))
+		except Exception as err:
+			self.page.open(error_message(err))
 
 	def go_to_login(self, e):
 		self.page.go("/login")

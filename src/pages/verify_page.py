@@ -6,17 +6,34 @@ from components.inputs import InputComponent
 from components.buttons import ButtonComponent, ImageButtonComponent
 from services.supabase_service import SpendingsSupabaseDatabase
 from icecream import ic
+from exceptions import (
+	GenericException,
+	WrongCredentialsException,
+	WrongPasswordException,
+	UserAlreadyExistsException,
+	EmailNotConfirmedException,
+	UserNotAllowedException,
+	SupabaseApiException,
+	PasswordNotEqualException,
+	InputNotFilledException,
+	EmailNotValidException
+)
+from components.dialogs import (
+	sucess_message,
+	error_message
+)
 
 class VerifyEmailPage(ft.View):
 
-	def __init__(self, page: ft.Page):
+	def __init__(self, page: ft.Page, supabase_service):
 		super().__init__(
 			route="/verify",
 			horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+			scroll=ft.ScrollMode.AUTO
 		)
 
 		self.page = page
-		self.supabase_service = SpendingsSupabaseDatabase()
+		self.supabase_service = supabase_service
 
 		# self.current_register_email = self.page.session.get("current_register_email")
 		# self.current_register_username = self.page.session.get("current_register_username")
@@ -136,17 +153,31 @@ If you don't receive any email, you can resend another one by clickin the button
 		logger.debug("resending email...")
 
 		try:
-			response = self.supabase_service.supabase_client.auth.resend({
-				"type": "signup",
-				"email": self.current_register_email,
-				"options": {
-					"email_redirect_to": "https://axeltroncosogomez.github.io/api/flet_spendings/supabase/verify/"
-				}
-			})
+			response = self.supabase_service.handle_resend_verification(
+				self.current_register_email
+			)
 			ic(response)
 
-		except Exception as e:
-			raise
+			self.page.open(sucess_message("Verification email resend sucessfully"))
+
+		except UserAlreadyExistsException as err:
+			self.page.open(error_message("Email is already in use"))
+		except InputNotFilledException as err:
+			self.page.open(error_message(err))
+		except PasswordNotEqualException as err:
+			self.page.open(error_message(err))
+		except SupabaseApiException as err:
+			self.page.open(error_message("Unable to connect to server"))
+		except WrongCredentialsException as err:
+			self.page.open(error_message("Wrong credentials"))
+		except EmailNotConfirmedException as err:
+			self.page.open(error_message("User email not confirmed"))
+		except UserNotAllowedException as err:
+			self.page.open(error_message("User not allowed"))
+		except GenericException as err:
+			self.page.open(error_message("Something went wrong"))
+		except Exception as err:
+			self.page.open(error_message(err))
 
 	def go_to_login(self, e):
 		self.page.go("/login")

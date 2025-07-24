@@ -1,27 +1,51 @@
+import re
 import jwt
+import socket
+import smtplib
 import flet as ft
 import webbrowser
+from typing import Tuple
 from utils.logger import logger
+from gotrue.errors import AuthApiError
 from components.inputs import InputComponent
 from components.buttons import ButtonComponent, ImageButtonComponent
 from services.supabase_service import SpendingsSupabaseDatabase
 from icecream import ic
+from exceptions import (
+	GenericException,
+	WrongCredentialsException,
+	WrongPasswordException,
+	UserAlreadyExistsException,
+	EmailNotConfirmedException,
+	UserNotAllowedException,
+	SupabaseApiException,
+	PasswordNotEqualException,
+	InputNotFilledException,
+	EmailNotValidException
+)
+from components.dialogs import (
+	sucess_message,
+	error_message
+)
 
 class RegisterPage(ft.View):
 
-	def __init__(self, page: ft.Page):
+	def __init__(self, page: ft.Page, supabase_service):
 		super().__init__(
 			route="/register",
 			horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+			scroll=ft.ScrollMode.AUTO
 		)
 
-		self.supabase_service = SpendingsSupabaseDatabase()
 		self.page = page
+		self.supabase_service = supabase_service
 
+		# TODO: Add shake when error happend on email field
 		self.email_input = InputComponent(
 			icon = ft.Icons.EMAIL,
 			label = "Email",
-			password = False
+			password = False,
+			validator = self.check_correct_email
 		)
 
 		self.username_input = InputComponent(
@@ -32,13 +56,13 @@ class RegisterPage(ft.View):
 
 		self.password_input = InputComponent(
 			icon = ft.Icons.LOCK,
-			label = "Repeat Password",
+			label = "Password",
 			password = True
 		)
 
 		self.repeat_password_input = InputComponent(
-			icon = ft.Icons.LOCK,
-			label = "Password",
+			icon = ft.Icons.LOCK_OUTLINED,
+			label = "Repeat Password",
 			password = True
 		)
 
@@ -72,10 +96,10 @@ class RegisterPage(ft.View):
 										alignment=ft.MainAxisAlignment.CENTER,
 										spacing = 15,
 										controls=[
-										    ft.Image(
-										        src="dummy_logo_light.png",
-										        width=150,
-										    ),										
+											ft.Image(
+												src="dummy_logo_light.png",
+												width=150,
+											),										
 											ft.Text("Create an account", size=20),
 											ft.Divider(height=10,color="transparent"),
 											self.email_input,
@@ -116,35 +140,108 @@ class RegisterPage(ft.View):
 		# self.page.session.set("current_register_username", username)
 		# self.page.session.set("current_register_password", password)
 
-		logger.debug(f"User email: {self.email_input.input_value}")
-		logger.debug(f"User username: {self.username_input.input_value}")		
-		logger.debug(f"User password: {self.password_input.input_value}")
+		email = self.email_input.input_value
+		username = self.username_input.input_value
+		password = self.password_input.input_value
+		repeat_password = self.repeat_password_input.input_value
+
+		logger.debug(f"User email: {email}")
+		logger.debug(f"User username: {username}")
+		logger.debug(f"User password: {password}")
 
 		# self.page.launch_url("https://yourusername.github.io/forgot", web_popup_window=True)
-
 		try:
+			if (
+				email == ""
+				or username == ""
+				or password == ""
+				or repeat_password == ""
+			):
+				raise InputNotFilledException("Please fill all the fields")
+
+			if password != repeat_password:
+				raise PasswordNotEqualException("Both password does not match")
+
 			response = self.supabase_service.handle_registration(
-				username = self.username_input.input_value,
-				user_email = self.email_input.input_value,
-				user_password = self.password_input.input_value
+				username = username,
+				user_email = email,
+				user_password = password
 			)
 
-			user_id = response.user.id
-			self.page.session.set("current_register_user_id", user_id)
-			logger.debug(f"Register new User ID: {user_id}")
+			if len(response.user.identities) == 0:
+				raise UserAlreadyExistsException("Email is already in use")
 
-			self.page.snack_bar = ft.SnackBar(ft.Text("Registration Sucessfully!"))
-			self.page.snack_bar.open = True
-			self.page.update()
+			ic(response)
+			# ic(response.user.identities)
+			# ic(response.session)
+
+			self.page.open(ft.SnackBar(ft.Text("Registration Sucessfully!")))
 
 			# webbrowser.open("https://axeltroncosogomez.github.io/verify")
 			self.page.go("/verify")
 
-		except Exception as e:
-			logger.error(f"Error during registration: {e}")
-			self.page.snack_bar = ft.SnackBar(ft.Text("Registration failed. Try again."))
-			self.page.snack_bar.open = True
-			self.page.update()
+		except UserAlreadyExistsException as err:
+			self.page.open(error_message("Email is already in use"))
+		except InputNotFilledException as err:
+			self.page.open(error_message(err))
+		except PasswordNotEqualException as err:
+			self.page.open(error_message(err))
+		except SupabaseApiException as err:
+			self.page.open(error_message("Unable to connect to server"))
+		except WrongCredentialsException as err:
+			self.page.open(error_message("Wrong credentials"))
+		except EmailNotConfirmedException as err:
+			self.page.open(error_message("User email not confirmed"))
+		except UserNotAllowedException as err:
+			self.page.open(error_message("User not allowed"))
+		except GenericException as err:
+			self.page.open(error_message("Something went wrong"))
+		except Exception as err:
+			self.page.open(error_message(err))
+
+	@staticmethod
+	def check_correct_email(value: str) -> Tuple[bool, str]:
+		if len(value) == 0:
+			return (True, "")
+		email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+		match = re.fullmatch(email_pattern, value)
+		logger.debug(re.fullmatch(email_pattern, value))
+		if match is None:
+			return (False, "Invalid email format")
+		if len(value) < 20:
+			return (False, "Email must be at least 20 characters long")
+		return (True, "")
+
+	def smtp_ping(email: str, timeout: int = 5) -> Tuple[bool, str]:
+	    """Verify if mailbox exists via SMTP ping (without sending email)"""
+	    if not validate_email_format(email):
+	        return False, "Invalid email format"
+	    
+	    domain = email.split('@')[1]
+	    
+	    try:
+	        # Get MX records
+	        records = socket.getaddrinfo(domain, None, socket.AF_INET)
+	        mx_servers = [r[4][0] for r in records]
+	        
+	        if not mx_servers:
+	            return False, "No MX records found"
+	        
+	        # Try each MX server
+	        for mx in mx_servers[:3]:  # Limit to 3 servers
+	            try:
+	                with smtplib.SMTP(mx, timeout=timeout) as server:
+	                    server.helo('example.com')
+	                    server.mail('test@example.com')
+	                    code, _ = server.rcpt(email)
+	                    if code == 250:
+	                        return True, "Mailbox exists"
+	            except (smtplib.SMTPException, socket.timeout, ConnectionError):
+	                continue
+	                
+	        return False, "Mailbox verification failed"
+	    except Exception as e:
+	        return False, f"SMTP error: {str(e)}"
 
 	def check_username_already_in_use(self):
 		...

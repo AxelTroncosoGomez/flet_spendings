@@ -13,9 +13,18 @@ from pages.register_page import RegisterPage
 from pages.spendings_page import SpendingsPage
 from pages.verify_page import VerifyEmailPage
 from pages.forgot_password_page import ForgotPasswordPage
+from pages.error_page import CrashPage
 from flet.auth.providers import GitHubOAuthProvider
 from utils.logger import logger
 import urllib.request
+from components.dialogs import (
+	sucess_message,
+	error_message
+)
+from exceptions import (
+	SupabaseApiException,
+	GenericException
+)
 
 load_dotenv()
 
@@ -42,6 +51,36 @@ APP_ASSETS_PATH = os.getenv("FLET_ASSETS_DIR")
 logger.debug(APP_ASSETS_PATH)
 
 def main(page: ft.Page):
+	page.title = "To-Do App"
+	page.window.width = 390
+	page.window.height = 844
+	page.horizontal_alignment = "center"
+	page.vertical_alignment = "center"
+	page.theme_mode = ft.ThemeMode.DARK
+	page.window.prevent_close = True
+	page.scroll = ft.ScrollMode.AUTO
+	supabase = None
+	try:
+		supabase = SpendingsSupabaseDatabase()
+	except GenericException as err:
+		error_message = repr(err)
+	except SupabaseApiException as err:
+		error_message = "Unable to connect to Supabase"
+		logger.debug("Something wrong happend on server ...")
+	except Exception as err:
+		error_message = repr(err)
+
+	if supabase is None:
+		page.views.clear()
+		# Show error screen and exit early
+		page.views.append(CrashPage(page, error_message))
+		page.go("/error")
+		return
+		
+	login_page = LoginPage(page, supabase)
+	register_page = RegisterPage(page, supabase)
+	verify_page = VerifyEmailPage(page, supabase)
+	forgot_password_page = ForgotPasswordPage(page, supabase)
 
 	def window_event(e):
 		if e.data == "close":
@@ -69,31 +108,18 @@ def main(page: ft.Page):
 	def route_change(e):
 		page.views.clear()
 		if page.route == "/login":
-			login_page = LoginPage(page)
 			page.views.append(login_page)
 		elif page.route == "/spendings":
-			spendings_page = SpendingsPage(page)
-			page.views.append(spendings_page)
+			page.views.append(SpendingsPage(page, supabase))
 		elif page.route == "/register":
-			spendings_page = RegisterPage(page)
-			page.views.append(spendings_page)
+			page.views.append(register_page)
 		elif page.route == "/verify":
-			verify_page = VerifyEmailPage(page)
 			page.views.append(verify_page)
 		elif page.route == "/forgotpassword":
-			forgot_password_page = ForgotPasswordPage(page)
 			page.views.append(forgot_password_page)
 		page.update()
 
-	page.title = "To-Do App"
-	page.window.width = 390
-	page.window.height = 844
-	page.horizontal_alignment = "center"
-	page.vertical_alignment = "center"
-	page.theme_mode = ft.ThemeMode.DARK
-	page.window.prevent_close = True
 	page.window.on_event = window_event
-	page.scroll = "auto"
 	page.on_route_change = route_change
 	page.go("/login")
 

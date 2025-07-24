@@ -13,6 +13,8 @@ dependencies = [
   "flet-webview>=0.1.0",
   "icecream>=2.1.5",
   "loguru>=0.7.3",
+  "prettyformatter>=2.0.13",
+  "pytest>=8.4.1",
   "python-dotenv>=1.1.1",
   "supabase>=2.17.0",
 ]
@@ -32,8 +34,12 @@ company = "Flet"
 # copyright text to display in about app dialogs
 copyright = "Copyright (C) 2025 by Flet"
 
+# Include the .env file in the build
+include = [".env"]
+
 [tool.flet.app]
 path = "src"
+
 
 [tool.uv]
 dev-dependencies = [

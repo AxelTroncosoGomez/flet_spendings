@@ -1,39 +1,52 @@
 import flet as ft
+from icecream import ic
 from utils.logger import logger
 from components.inputs import InputComponent
 from components.buttons import ButtonComponent, ImageButtonComponent
 from services.supabase_service import SpendingsSupabaseDatabase
-from icecream import ic
+from exceptions import (
+	GenericException,
+	WrongCredentialsException,
+	WrongPasswordException,
+	UserAlreadyExistsException,
+	EmailNotConfirmedException,
+	UserNotAllowedException,
+	SupabaseApiException,
+	EmailNotValidException
+)
+from components.dialogs import (
+	sucess_message,
+	error_message
+)
 
 class LoginPage(ft.View):
 
-	def __init__(self, page: ft.Page):
+	def __init__(self, page: ft.Page, supabase_service):
 		super().__init__(
 			route="/login",
 			horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+			scroll=ft.ScrollMode.AUTO
 		)
 
 		self.page = page
-		self.supabase_service = SpendingsSupabaseDatabase()
+		self.supabase_service = supabase_service
 
 		self.email_input = InputComponent(
 			icon = ft.Icons.EMAIL,
 			label = "Email",
-			# value = "admin",
-			password = False
+			password = False,
 		)
 
 		self.password_input = InputComponent(
 			icon = ft.Icons.LOCK,
 			label = "Password",
-			# value = "admin",
 			password = True
 		)
 
 		self.login_btn = ButtonComponent(
 			text = "Continue",
 			trigger = self.handle_user_login,
-			color = "#8db2dd"
+			color = "#8db2dd",
 		)
 
 		self.google_login_btn = ImageButtonComponent(
@@ -79,12 +92,12 @@ class LoginPage(ft.View):
 										alignment=ft.MainAxisAlignment.CENTER,
 										spacing = 10,
 										controls=[
-										    ft.Image(
-										        src="dummy_logo_light.png",
-										        width=150,
-										    ),
+											ft.Image(
+												src="dummy_logo_light.png",
+												width=150,
+											),
 											ft.Text("Welcome to DummyDev", size=20),
-											ft.Divider(height = 10,color="transparent"),
+											ft.Divider(height = 10, color="transparent"),
 											self.email_input,
 											self.password_input,
 											ft.Container(
@@ -136,7 +149,6 @@ class LoginPage(ft.View):
 		]
 
 	def handle_user_login(self, e):
-		logger.debug("Logged successfully!!!")
 		logger.debug(f"Username: {self.email_input.input_value}")
 		logger.debug(f"Password: {self.password_input.input_value}")
 
@@ -149,11 +161,29 @@ class LoginPage(ft.View):
 			self.page.session.set("current_user_id", response.user.id)
 			logger.debug(f"Login with ID: {response.user.id}")
 
+			self.page.session.set("user_access_token", response.session.access_token)
+			self.page.session.set("user_refresh_token", response.session.refresh_token)
+
+			self.page.open(sucess_message("Login Sucessfull!"))
+
+			self.page.go("/spendings")
+			
+			self.clear_input_entries()
+
+		except SupabaseApiException as err:
+			self.page.open(error_message("Unable to connect to server"))
+		except WrongCredentialsException as err:
+			self.page.open(error_message("Wrong credentials"))
+		except WrongPasswordException as err:
+			self.page.open(error_message("Wrong email or password"))
+		except EmailNotConfirmedException as err:
+			self.page.open(error_message("User email not confirmed"))
+		except UserNotAllowedException as err:
+			self.page.open(error_message("User not allowed"))
+		except GenericException as err:
+			self.page.open(error_message("Something went wrong"))
 		except Exception as err:
-			logger.error(f"Error during registration: {err}")
-			self.page.snack_bar = ft.SnackBar(ft.Text("Login failed. Try again."))
-			self.page.snack_bar.open = True
-			self.page.update()
+			self.page.open(error_message(err))
 
 	def go_to_sign_up(self, e):
 		logger.debug("Sign up!")
@@ -165,9 +195,31 @@ class LoginPage(ft.View):
 
 	def handle_google_login(self, e):
 		logger.debug("Login with Google")
+		self.page.open(
+			sucess_message(
+				"Sucessfully logged to Google",
+				3000
+			)
+		)
 
 	def handle_linkedin_login(self, e):
 		logger.debug("Login with Linkedin")
+		self.page.open(
+			sucess_message(
+				"Sucessfully logged to Linkedin",
+				3000
+			)
+		)
 
 	def handle_microsoft_login(self, e):
 		logger.debug("Login with Microsoft")
+		self.page.open(
+			sucess_message(
+				"Sucessfully logged to Microsoft",
+				3000
+			)
+		)
+
+	def clear_input_entries(self):
+		self.email_input.set_value("")
+		self.password_input.set_value("")

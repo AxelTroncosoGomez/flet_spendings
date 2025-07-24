@@ -2,7 +2,10 @@ import os
 import uuid
 import sys
 import sqlite3
+import asyncio
 import flet as ft
+import urllib.request
+from icecream import ic
 from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -11,24 +14,24 @@ from services.supabase_service import SpendingsSupabaseDatabase
 from components.inputs import InputComponent
 from components.buttons import ButtonComponent, ImageButtonComponent
 from utils.logger import logger
-import urllib.request
 
 class SpendingsPage(ft.View):
-	def __init__(self, page: ft.Page):
+	def __init__(self, page: ft.Page, supabase_service):
 		super().__init__(
 			route="/spendings",
 			horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+			scroll=ft.ScrollMode.AUTO
 		)
 
 		self.page = page
-		self.supabase_service = SpendingsSupabaseDatabase()
-		
-		self.current_user_id = self.page.session.get("current_user_id")
-		logger.debug(f"User ID: {self.current_user_id}")
+		self.supabase_service = supabase_service
 
-		self.database = LocalSpendingsDatabase("spendings.db", self.current_user_id)
-		self.database.connect()
-		self.database.create_or_open()
+		# logger.debug(self.supabase_service.get_user())
+		# logger.debug(self.supabase_service.get_session())
+
+		# self.database = LocalSpendingsDatabase("spendings.db", self.current_user_id)
+		# self.database.connect()
+		# self.database.create_or_open()
 
 		self.input_date = InputComponent(
 			icon = ft.Icons.CALENDAR_MONTH,
@@ -66,6 +69,17 @@ class SpendingsPage(ft.View):
 			data_row_color={"hovered": "0x30FF0000"},
 			divider_thickness=0,
 			show_bottom_border=True,
+		)
+
+		self.confirm_logout_dlg = ft.AlertDialog(
+			modal=True,
+			title=ft.Text("Please confirm"),
+			content=ft.Text("Do you really want to logout?"),
+			actions=[
+				ft.ElevatedButton("Yes", on_click=self.yes_click),
+				ft.OutlinedButton("No", on_click=self.close_confirm_logout_dialog),
+			],
+			actions_alignment=ft.MainAxisAlignment.END,
 		)
 
 		# Create dialog (moved before table_view since it's referenced in open_new_entry_dialog)
@@ -173,38 +187,83 @@ class SpendingsPage(ft.View):
 											scroll = True,
 											expand = 1,
 										)
-									)
+									),
 								],
 							)
 						)
 					]
 				)
+			),
+			ft.FloatingActionButton(
+				icon = ft.Icons.CANCEL_OUTLINED, 
+				on_click = self.handle_logout_user, 
 			)
 		]
 
+		access_token = self.page.session.get("user_access_token")
+		refresh_token = self.page.session.get("user_refresh_token")
+
+		self.session = self.supabase_service.set_session(
+			access_token,
+			refresh_token,
+		)
+
+		self.user = self.supabase_service.supabase_client.auth.get_user().user
+		ic(self.user)
+		logger.debug(f"On SpendingsPage with user: {self.user.id} -> {type(self.user.id)}")
+
 		self._init_db()
+
+	def _check_user_id_match(self):
+		"""Check if user_id stored in session matches the user_id used in records."""
+		session_user_id = self.supabase_service.supabase_client.auth.get_user().user.id
+		logger.debug(f"Session user_id: {session_user_id}")
+
+		for row in self.current_data:
+			record_user_id = row.get("user_id")
+			if record_user_id != session_user_id:
+				logger.warning(f"Mismatch detected: row user_id = {record_user_id} ≠ session user_id = {session_user_id}")
+				self.page.open(ft.SnackBar(ft.Text(
+					f"⚠️ Error: el user_id del registro '{row.get('item_id')}' no coincide con el usuario autenticado"
+				)))
+				break
 
 	def _init_db(self):
 		# Here the logic should be taake into account the way the user will store its data
 		# The user could store its data on cloud (Supabase) or using Local storage (SQlite)
 
 		# For a CRUD environment
-		self.current_data = self.database.select_all_data(exclude_id=False)
-		# Based on the data inside `self.current_data`, populate the DataTable inmediatly
+		# self.current_data = self.database.select_all_data(exclude_id=False)
+		# # Based on the data inside `self.current_data`, populate the DataTable inmediatly
+		# for row in self.current_data:
+		# 	self.table_view.rows.append(
+		# 		self._create_data_row(
+		# 			item_id = row[0], 
+		# 			date = row[2], 
+		# 			store = row[3], 
+		# 			product = row[4], 
+		# 			amount = row[5], 
+		# 			price = row[6],
+		# 		)
+		# 	)
+
+		# For Cloud Storage
+		self.current_data = self.supabase_service.fetch_all_data()
+		ic(self.current_data)
 		for row in self.current_data:
+			logger.debug(f"Adding row: {row} to DataTable")
 			self.table_view.rows.append(
 				self._create_data_row(
-					item_id = row[0], 
-					date = row[2], 
-					store = row[3], 
-					product = row[4], 
-					amount = row[5], 
-					price = row[6],
+					item_id = row["item_id"], 
+					date = row["date"], 
+					store = row["store"], 
+					product = row["product"], 
+					amount = row["amount"], 
+					price = row["price"],
 				)
 			)
 
-		# For Cloud Storage
-		# self.current_data = 
+		self._check_user_id_match()
 
 	def reset_dialog_entries(self):
 		self.input_date.set_value(datetime.now().date().strftime("%d-%m-%Y"))
@@ -212,7 +271,7 @@ class SpendingsPage(ft.View):
 		self.input_product.set_value("")
 		self.input_amount.set_value("")
 		self.input_price.set_value("")
-		self.current_entry_id = ""
+		self.current_entry_id = None
 
 	def _create_data_row(self, item_id, date, store, product, amount, price, selected=False):
 		"""Helper method to create a DataRow with default on_select_changed behavior"""
@@ -264,7 +323,15 @@ class SpendingsPage(ft.View):
 		new_amount = int(self.input_amount.input_value)
 		new_price = float(self.input_price.input_value)
 
-		new_values = (new_date, new_store, new_product, new_amount, new_price)
+		updated_item = {
+			"item_id": self.current_entry_id,
+			"user_id": self.user.id,
+			"date": new_date,
+			"store": new_store,
+			"product": new_product,
+			"amount": new_amount,
+			"price": new_price
+		}
 
 		new_rows = []
 		for row in self.table_view.rows:
@@ -279,10 +346,18 @@ class SpendingsPage(ft.View):
 		self.table_view.rows = new_rows
 		# After modifying rows, update the UI
 		self.table_view.update()		
+
+		logger.debug(f"Editing item for user: {self.user.id}")
+		ic(updated_item)
+
+		response = self.supabase_service.update(
+			item_id = self.current_entry_id,
+			update_value = updated_item
+		)
+		logger.debug(response)
+
 		self.reset_dialog_entries()
 		self.close_edit_entry_dialog(e)
-
-		self.database.update(self.current_entry_id, new_values)
 
 	def delete_spending(self, e):
 		logger.debug(f"Current entry ID: {self.current_entry_id}")
@@ -293,8 +368,6 @@ class SpendingsPage(ft.View):
 		amount = int(self.input_amount.input_value)
 		price = float(self.input_price.input_value)
 
-		logger.debug(f"Deliting row {(self.current_entry_id, self.user_id, date, store, product, amount, price)}...")
-
 		filtered_rows = [
 			row for row in self.table_view.rows
 			if row.data != self.current_entry_id
@@ -303,7 +376,9 @@ class SpendingsPage(ft.View):
 		# After modifying rows, update the UI
 		self.table_view.update()
 
-		self.database.delete_row_by_id(self.current_entry_id)
+		logger.debug(f"Deliting row {self.current_entry_id} from user {self.user.id}")
+		response = self.supabase_service.delete(self.current_entry_id)
+		logger.debug(response)
 
 		self.reset_dialog_entries()
 		self.close_edit_entry_dialog(e)
@@ -314,31 +389,60 @@ class SpendingsPage(ft.View):
 		e.control.page.update()
 
 	def add_new_spending(self, e):
-		logger.debug("Adding new user to Datatable")
 		item_id = str(uuid.uuid4())
-		logger.debug(f"item ID: {item_id} -> {type(item_id)}")
+		logger.debug(f"New item ID: {item_id} -> {type(item_id)}")
 		# Get the current values
 		self.input_date.set_value(datetime.now().date().strftime("%d-%m-%Y"))
 
 		date = self.input_date.input_value
-		logger.debug(f"date: {date} -> {type(date)}")
 		store = self.input_store.input_value
-		logger.debug(f"store: {store} -> {type(store)}")
 		product = self.input_product.input_value
-		logger.debug(f"product: {product} -> {type(product)}")
 		amount = int(self.input_amount.input_value)
-		logger.debug(f"amount: {amount} -> {type(amount)}")
 		price = float(self.input_price.input_value)
-		logger.debug(f"price: {price} -> {type(price)}")
 
 		self.table_view.rows.append(
 			self._create_data_row(item_id, date, store, product, amount, price)
 		)
 
-		# Close dialog and clear fields
-		self.close_new_entry_dialog(e)
+		new_item = {
+			"item_id": item_id,
+			"user_id": self.user.id,
+			"date": date,
+			"store": store,
+			"product": product,
+			"amount": amount,
+			"price": price
+		}
+
+		logger.debug("Adding a new item ...")
+		ic(new_item)
+		response = self.supabase_service.insert(
+			new_value = new_item
+		)
+		logger.debug(response)
+
 		self.reset_dialog_entries()
+		self.close_new_entry_dialog(e)
 
-		logger.debug(f"Inserting data {(item_id, self.user_id, date, store, product, amount, price)} into database ...")
+	def handle_logout_user(self, e):
+		e.control.page.overlay.append(self.confirm_logout_dlg)
+		self.confirm_logout_dlg.open = True
+		e.control.page.update()
 
-		self.database.insert((item_id, self.user_id, date, store, product, amount, price))
+	def yes_click(self, e):
+		self.confirm_logout_dlg.open = False
+		e.control.page.update()
+		
+		# Perform logout
+		self.supabase_service.handle_logout()
+		
+		# Clear session data
+		self.page.session.clear()
+		
+		# Force a full page reload
+		self.page.views.clear()
+		self.page.go("/login")
+
+	def close_confirm_logout_dialog(self, e):
+		self.confirm_logout_dlg.open = False
+		e.control.page.update()
