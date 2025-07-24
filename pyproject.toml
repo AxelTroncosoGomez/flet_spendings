@@ -46,6 +46,10 @@ dev-dependencies = [
     "flet[all]==0.28.2",
 ]
 
+[tool.flet.android]
+min_sdk_version = 21
+target_sdk_version = 34
+
 [tool.poetry]
 package-mode = false
 

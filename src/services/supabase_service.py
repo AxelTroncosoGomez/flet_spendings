@@ -13,7 +13,7 @@ from postgrest.exceptions import APIError
 from supabase._sync.client import SupabaseException
 
 from utils.logger import logger
-# from pages.login_page import LoginPage
+from config import Config
 from services.crud import LocalSpendingsDatabase
 from exceptions import (
 	GenericException,
@@ -47,8 +47,8 @@ class SpendingsSupabaseDatabase():
 		self.__get_client()
 
 	def __get_credentials(self):
-		self.supabase_url = os.environ.get("SUPABASE_URL")
-		self.supabase_key = os.environ.get("SUPABASE_KEY")
+		self.supabase_url = Config.SUPABASE_URL
+		self.supabase_key = Config.SUPABASE_KEY
 
 	def __get_client(self):
 		try:
