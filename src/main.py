@@ -3,6 +3,9 @@ import uuid
 import sys
 import sqlite3
 import flet as ft
+import asyncio
+import threading
+from typing import Optional
 from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -47,13 +50,33 @@ load_dotenv()
 # Samsung Galaxy Tab A9	   800	1340
 # Full HD Desktop Browser  1920	1080
 
+async def init_async_supabase() -> Optional[SpendingsSupabaseDatabase]:
+	try:
+		db = SpendingsSupabaseDatabase()
+		await db.async_client()
+		return db
+	except GenericException as err:
+		logger.error(f"Generic Supabase error: {repr(err)}")
+		return None
+	except SupabaseApiException as err:
+		logger.error("Supabase API error: " + str(err))
+		return None
+	except Exception as err:
+		logger.error(f"Unexpected error: {repr(err)}")
+		return None
+
 APP_ASSETS_PATH = os.getenv("FLET_ASSETS_DIR")
 logger.debug(APP_ASSETS_PATH)
 
 def main(page: ft.Page):
-	page.title = "To-Do App"
+	page.title = "Spendings"
 	page.window.width = 390
 	page.window.height = 844
+	######### To be able to use transparent background, use ft.WindowDragArea() #########
+	# page.window.bgcolor = ft.Colors.TRANSPARENT
+	# page.bgcolor = ft.Colors.TRANSPARENT
+	# page.window.title_bar_hidden = True
+	# page.window.frameless = True
 	page.horizontal_alignment = "center"
 	page.vertical_alignment = "center"
 	page.theme_mode = ft.ThemeMode.DARK
@@ -62,6 +85,8 @@ def main(page: ft.Page):
 	supabase = None
 	try:
 		supabase = SpendingsSupabaseDatabase()
+		supabase.sync_client()
+		# supabase = asyncio.run(init_async_supabase())
 	except GenericException as err:
 		error_message = repr(err)
 	except SupabaseApiException as err:
@@ -110,6 +135,11 @@ def main(page: ft.Page):
 		if page.route == "/login":
 			page.views.append(login_page)
 		elif page.route == "/spendings":
+			# spendings_page = SpendingsPage(page, supabase)
+			# asyncio.run(spendings_page.init_user())
+			# threading.Thread(
+			# 	target = asyncio.run(spendings_page.init_user())
+			# ).start()
 			page.views.append(SpendingsPage(page, supabase))
 		elif page.route == "/register":
 			page.views.append(register_page)

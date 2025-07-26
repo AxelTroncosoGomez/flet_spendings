@@ -175,10 +175,12 @@ class RegisterPage(ft.View):
 			# ic(response.user.identities)
 			# ic(response.session)
 
-			self.page.open(ft.SnackBar(ft.Text("Registration Sucessfully!")))
+			self.page.open(sucess_message("Registration Sucessfully!"))
 
 			# webbrowser.open("https://axeltroncosogomez.github.io/verify")
 			self.page.go("/verify")
+
+			self.clear_input_entries()
 
 		except UserAlreadyExistsException as err:
 			self.page.open(error_message("Email is already in use"))
@@ -195,7 +197,7 @@ class RegisterPage(ft.View):
 		except UserNotAllowedException as err:
 			self.page.open(error_message("User not allowed"))
 		except GenericException as err:
-			self.page.open(error_message("Something went wrong"))
+			self.page.open(error_message(err))
 		except Exception as err:
 			self.page.open(error_message(err))
 
@@ -243,11 +245,11 @@ class RegisterPage(ft.View):
 	    except Exception as e:
 	        return False, f"SMTP error: {str(e)}"
 
-	def check_username_already_in_use(self):
-		...
-
-	def check_both_password_equal(self):
-		...
-
 	def go_to_login(self, e):
 		self.page.go("/login")
+
+	def clear_input_entries(self):
+		self.email_input.set_value("")
+		self.username_input.set_value("")
+		self.password_input.set_value("")
+		self.repeat_password_input.set_value("")

@@ -70,6 +70,10 @@ class LoginPage(ft.View):
 			trigger = self.handle_microsoft_login
 		)
 
+		self.keep_logged_checkbox = ft.Checkbox(
+			label="Remember me",
+		)
+
 		self.controls = [
 			ft.SafeArea(
 				content = ft.ResponsiveRow(
@@ -101,6 +105,8 @@ class LoginPage(ft.View):
 											self.email_input,
 											self.password_input,
 											ft.Container(
+												padding = 0,
+												margin = 0,												
 												content = ft.Row([
 													ft.Text(
 														spans=[
@@ -117,6 +123,15 @@ class LoginPage(ft.View):
 												alignment = ft.MainAxisAlignment.END
 												),
 											),
+											ft.Container(
+												padding = 0,
+												margin = 0,												
+												content = ft.Row([
+													self.keep_logged_checkbox
+												], 
+												alignment = ft.MainAxisAlignment.START
+												),
+											),											
 											self.login_btn,
 											ft.Text(
 												spans=[
@@ -152,6 +167,9 @@ class LoginPage(ft.View):
 		logger.debug(f"Username: {self.email_input.input_value}")
 		logger.debug(f"Password: {self.password_input.input_value}")
 
+		if self.keep_logged_checkbox.value:
+			logger.debug("Session will be remembered ...")
+
 		try:
 			response = self.supabase_service.handle_login(
 				user_email = self.email_input.input_value, 
@@ -181,9 +199,46 @@ class LoginPage(ft.View):
 		except UserNotAllowedException as err:
 			self.page.open(error_message("User not allowed"))
 		except GenericException as err:
-			self.page.open(error_message("Something went wrong"))
+			self.page.open(error_message(f"{type(err).__name__}:{err}"))
 		except Exception as err:
-			self.page.open(error_message(err))
+			self.page.open(error_message(f"{type(err).__name__}:{err}"))
+
+	async def async_handle_user_login(self, e):
+		logger.debug(f"Username: {self.email_input.input_value}")
+		logger.debug(f"Password: {self.password_input.input_value}")
+
+		try:
+			response = await self.supabase_service.handle_login(
+				user_email = self.email_input.input_value, 
+				user_password = self.password_input.input_value
+			)
+			ic(response)
+			self.page.session.set("current_user_id", response.user.id)
+			logger.debug(f"Login with ID: {response.user.id}")
+
+			self.page.session.set("user_access_token", response.session.access_token)
+			self.page.session.set("user_refresh_token", response.session.refresh_token)
+
+			self.page.open(sucess_message("Login Sucessfull!"))
+
+			self.page.go("/spendings")
+			
+			self.clear_input_entries()
+
+		except SupabaseApiException as err:
+			self.page.open(error_message("Unable to connect to server"))
+		except WrongCredentialsException as err:
+			self.page.open(error_message("Wrong credentials"))
+		except WrongPasswordException as err:
+			self.page.open(error_message("Wrong email or password"))
+		except EmailNotConfirmedException as err:
+			self.page.open(error_message("User email not confirmed"))
+		except UserNotAllowedException as err:
+			self.page.open(error_message("User not allowed"))
+		except GenericException as err:
+			self.page.open(error_message(f"{type(err).__name__}:{err}"))
+		except Exception as err:
+			self.page.open(error_message(f"{type(err).__name__}:{err}"))
 
 	def go_to_sign_up(self, e):
 		logger.debug("Sign up!")

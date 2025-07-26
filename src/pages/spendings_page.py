@@ -134,6 +134,14 @@ class SpendingsPage(ft.View):
 			actions_alignment=ft.MainAxisAlignment.END,
 		)
 
+		self.refresh_icon_button = ft.IconButton(
+            icon = ft.Icons.REFRESH,
+            icon_color = "#8db2dd",
+            icon_size = 40,
+            # tooltip="Yep",
+            on_click = self.refresh_datatable
+        )
+
 		self.controls = [
 			ft.SafeArea(
 				content = ft.ResponsiveRow(
@@ -155,6 +163,7 @@ class SpendingsPage(ft.View):
 										content = ft.ResponsiveRow(
 											alignment=ft.MainAxisAlignment.CENTER,
 											controls = [
+												self.refresh_icon_button,
 												ft.TextField(
 													prefix_icon = ft.Icons.SEARCH,
 													hint_text="Search for entry",
@@ -200,52 +209,51 @@ class SpendingsPage(ft.View):
 			)
 		]
 
+		self._sync_init_user()
+
+		# self.supabase_service.supabase_client.realtime.channel("spendings_changes") \
+		#     .on(
+		#         "postgres_changes",
+		#         {
+		#             "event": "*",  # Or "INSERT", "UPDATE", "DELETE"
+		#             "schema": "public",
+		#             "table": "spendings"
+		#         },
+		#         self.handle_realtime_change
+		#     ).subscribe()
+
+	def refresh_datatable(self, e):
+		logger.debug("refreshing Datatable from Supabase ...")
+		self.table_view.rows = []
+		self._sync_get_from_db()
+		self.table_view.update()
+		
+	def _sync_init_user(self):
+		logger.debug("Starting _sync_init_user")
 		access_token = self.page.session.get("user_access_token")
+		logger.debug(f"Access Token: {access_token}")
 		refresh_token = self.page.session.get("user_refresh_token")
+		logger.debug(f"Refresh Token: {refresh_token}")
 
 		self.session = self.supabase_service.set_session(
 			access_token,
 			refresh_token,
 		)
+		logger.debug(f"Session create: {self.session}")
 
 		self.user = self.supabase_service.supabase_client.auth.get_user().user
 		ic(self.user)
 		logger.debug(f"On SpendingsPage with user: {self.user.id} -> {type(self.user.id)}")
+		self._sync_get_from_db()
 
-		self._init_db()
+	async def _async_init_user(self):
+	    user_response = await self.supabase_service.supabase_client.auth.get_user()
+	    self.user = user_response.user
+	    logger.debug(f"On SpendingsPage with user: {self.user.id} -> {type(self.user.id)}")
+	    await self._async_get_from_db()
 
-	def _check_user_id_match(self):
-		"""Check if user_id stored in session matches the user_id used in records."""
-		session_user_id = self.supabase_service.supabase_client.auth.get_user().user.id
-		logger.debug(f"Session user_id: {session_user_id}")
-
-		for row in self.current_data:
-			record_user_id = row.get("user_id")
-			if record_user_id != session_user_id:
-				logger.warning(f"Mismatch detected: row user_id = {record_user_id} ≠ session user_id = {session_user_id}")
-				self.page.open(ft.SnackBar(ft.Text(
-					f"⚠️ Error: el user_id del registro '{row.get('item_id')}' no coincide con el usuario autenticado"
-				)))
-				break
-
-	def _init_db(self):
-		# Here the logic should be taake into account the way the user will store its data
-		# The user could store its data on cloud (Supabase) or using Local storage (SQlite)
-
-		# For a CRUD environment
-		# self.current_data = self.database.select_all_data(exclude_id=False)
-		# # Based on the data inside `self.current_data`, populate the DataTable inmediatly
-		# for row in self.current_data:
-		# 	self.table_view.rows.append(
-		# 		self._create_data_row(
-		# 			item_id = row[0], 
-		# 			date = row[2], 
-		# 			store = row[3], 
-		# 			product = row[4], 
-		# 			amount = row[5], 
-		# 			price = row[6],
-		# 		)
-		# 	)
+	def _sync_get_from_db(self):
+		logger.debug("Starting _sync_get_from_db()")
 
 		# For Cloud Storage
 		self.current_data = self.supabase_service.fetch_all_data()
@@ -263,7 +271,24 @@ class SpendingsPage(ft.View):
 				)
 			)
 
-		self._check_user_id_match()
+	async def _async_get_from_db(self):
+		logger.debug("Starting coroutine _async_get_from_db()")
+
+		# For Cloud Storage
+		self.current_data = await self.supabase_service.async_fetch_all_data()
+		ic(self.current_data)
+		for row in self.current_data:
+			logger.debug(f"Adding row: {row} to DataTable")
+			self.table_view.rows.append(
+				self._create_data_row(
+					item_id = row["item_id"], 
+					date = row["date"], 
+					store = row["store"], 
+					product = row["product"], 
+					amount = row["amount"], 
+					price = row["price"],
+				)
+			)
 
 	def reset_dialog_entries(self):
 		self.input_date.set_value(datetime.now().date().strftime("%d-%m-%Y"))

@@ -1,6 +1,5 @@
 import jwt
 import flet as ft
-import flet_webview as fwv
 from utils.logger import logger
 from components.inputs import InputComponent
 from components.buttons import ButtonComponent, ImageButtonComponent
@@ -175,7 +174,7 @@ If you don't receive any email, you can resend another one by clickin the button
 		except UserNotAllowedException as err:
 			self.page.open(error_message("User not allowed"))
 		except GenericException as err:
-			self.page.open(error_message("Something went wrong"))
+			self.page.open(error_message(err))
 		except Exception as err:
 			self.page.open(error_message(err))
 
