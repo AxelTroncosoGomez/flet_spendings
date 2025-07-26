@@ -203,10 +203,18 @@ class SpendingsPage(ft.View):
 					]
 				)
 			),
-			ft.FloatingActionButton(
-				icon = ft.Icons.CANCEL_OUTLINED, 
-				on_click = self.handle_logout_user, 
-			)
+			ft.Container(
+				padding = 0,
+				margin = 0,												
+				content = ft.Row([
+					ft.FloatingActionButton(
+						icon = ft.Icons.LOGOUT,
+						on_click = self.handle_logout_user, 
+					)
+				], 
+				alignment = ft.MainAxisAlignment.END
+				),
+			),
 		]
 
 		self._sync_init_user()
@@ -227,7 +235,7 @@ class SpendingsPage(ft.View):
 		self.table_view.rows = []
 		self._sync_get_from_db()
 		self.table_view.update()
-		
+
 	def _sync_init_user(self):
 		logger.debug("Starting _sync_init_user")
 		access_token = self.page.session.get("user_access_token")
