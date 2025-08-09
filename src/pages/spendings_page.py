@@ -14,6 +14,22 @@ from services.supabase_service import SpendingsSupabaseDatabase
 from components.inputs import InputComponent
 from components.buttons import ButtonComponent, ImageButtonComponent
 from utils.logger import logger
+from exceptions import (
+	GenericException,
+	WrongCredentialsException,
+	WrongPasswordException,
+	UserAlreadyExistsException,
+	EmailNotConfirmedException,
+	UserNotAllowedException,
+	SupabaseApiException,
+	EmailNotValidException,
+	InputNotFilledException,
+	InvalidInputException
+)
+from components.dialogs import (
+	sucess_message,
+	error_message
+)
 
 class SpendingsPage(ft.View):
 	def __init__(self, page: ft.Page, supabase_service):
@@ -135,12 +151,31 @@ class SpendingsPage(ft.View):
 		)
 
 		self.refresh_icon_button = ft.IconButton(
-            icon = ft.Icons.REFRESH,
-            icon_color = "#8db2dd",
-            icon_size = 40,
-            # tooltip="Yep",
-            on_click = self.refresh_datatable
-        )
+			icon = ft.Icons.REFRESH,
+			icon_color = "#8db2dd",
+			icon_size = 40,
+			# tooltip="Yep",
+			on_click = self.refresh_datatable
+		)
+
+		self.appbar = ft.AppBar(
+			leading=ft.Icon(ft.Icons.PALETTE),
+			leading_width=40,
+			title=ft.Text("AppBar Example"),
+			center_title=False,
+			bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
+			actions=[
+				ft.IconButton(ft.Icons.WB_SUNNY_OUTLINED),
+				ft.IconButton(ft.Icons.FILTER_3),
+				ft.PopupMenuButton(
+					items=[
+						ft.PopupMenuItem(text="Search"),
+						ft.PopupMenuItem(),  # divider
+						ft.PopupMenuItem(text="Settings"),
+					]
+				),
+			],
+		)
 
 		self.controls = [
 			ft.SafeArea(
@@ -239,9 +274,9 @@ class SpendingsPage(ft.View):
 	def _sync_init_user(self):
 		logger.debug("Starting _sync_init_user")
 		access_token = self.page.session.get("user_access_token")
-		logger.debug(f"Access Token: {access_token}")
+		# logger.debug(f"Access Token: {access_token}")
 		refresh_token = self.page.session.get("user_refresh_token")
-		logger.debug(f"Refresh Token: {refresh_token}")
+		# logger.debug(f"Refresh Token: {refresh_token}")
 
 		self.session = self.supabase_service.set_session(
 			access_token,
@@ -255,19 +290,19 @@ class SpendingsPage(ft.View):
 		self._sync_get_from_db()
 
 	async def _async_init_user(self):
-	    user_response = await self.supabase_service.supabase_client.auth.get_user()
-	    self.user = user_response.user
-	    logger.debug(f"On SpendingsPage with user: {self.user.id} -> {type(self.user.id)}")
-	    await self._async_get_from_db()
+		user_response = await self.supabase_service.supabase_client.auth.get_user()
+		self.user = user_response.user
+		logger.debug(f"On SpendingsPage with user: {self.user.id} -> {type(self.user.id)}")
+		await self._async_get_from_db()
 
 	def _sync_get_from_db(self):
 		logger.debug("Starting _sync_get_from_db()")
 
 		# For Cloud Storage
 		self.current_data = self.supabase_service.fetch_all_data()
-		ic(self.current_data)
+		# ic(self.current_data)
 		for row in self.current_data:
-			logger.debug(f"Adding row: {row} to DataTable")
+			# logger.debug(f"Adding row: {row} to DataTable")
 			self.table_view.rows.append(
 				self._create_data_row(
 					item_id = row["item_id"], 
@@ -428,13 +463,50 @@ class SpendingsPage(ft.View):
 		self.input_date.set_value(datetime.now().date().strftime("%d-%m-%Y"))
 
 		date = self.input_date.input_value
+		if (date == "") or (date is None):
+			self.input_date.set_error("Date field is empty")
+			raise InputNotFilledException("Please complete all the fields")
 		store = self.input_store.input_value
+		if (store == ""):
+			self.input_store.set_error("Store field is empty")
+			raise InputNotFilledException("Please complete all the fields")
+		else:
+			self.input_store.reset()
 		product = self.input_product.input_value
-		amount = int(self.input_amount.input_value)
-		price = float(self.input_price.input_value)
+		if (product == ""):
+			self.input_product.set_error("Product field is empty")
+		else:
+			self.input_product.reset()
+		try:
+			amount = int(self.input_amount.input_value)
+			if amount <= 0.:
+				self.input_amount.set_error("Amount must be greater than 0")
+				raise InvalidInputException("Please type a numeric value on Amount")
+			else:
+				self.input_amount.reset()
+		except ValueError as err:
+			self.input_price.set_error("Please type a numeric value")
+			raise InvalidInputException("Please type a numeric value on Amount")
+		try:
+			price = float(self.input_price.input_value)
+			if price <= 0.:
+				self.input_amount.set_error("Please type a numeric value")
+				raise InvalidInputException("Please type a numeric value on Price")
+			else:
+				self.input_price.reset()
+		except ValueError as err:
+			self.input_price.set_error("Please type a numeric value")
+			raise InvalidInputException("Please type a numeric value on Price")
 
 		self.table_view.rows.append(
-			self._create_data_row(item_id, date, store, product, amount, price)
+			self._create_data_row(
+				item_id = item_id, 
+				date = date, 
+				store = store, 
+				product = product, 
+				amount = amount, 
+				price = price
+			)
 		)
 
 		new_item = {

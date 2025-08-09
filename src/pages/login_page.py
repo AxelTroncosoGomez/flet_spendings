@@ -12,7 +12,8 @@ from exceptions import (
 	EmailNotConfirmedException,
 	UserNotAllowedException,
 	SupabaseApiException,
-	EmailNotValidException
+	EmailNotValidException,
+	InvalidCredentialsException
 )
 from components.dialogs import (
 	sucess_message,
@@ -200,6 +201,8 @@ class LoginPage(ft.View):
 			self.page.open(error_message("User not allowed"))
 		except GenericException as err:
 			self.page.open(error_message(f"{type(err).__name__}:{err}"))
+		except InvalidCredentialsException as err:
+			self.page.open(error_message("Please provide the email and password"))
 		except Exception as err:
 			self.page.open(error_message(f"{type(err).__name__}:{err}"))
 
@@ -256,6 +259,8 @@ class LoginPage(ft.View):
 				3000
 			)
 		)
+		self.password_input.set_error("Wrong password")
+		self.page.update()
 
 	def handle_linkedin_login(self, e):
 		logger.debug("Login with Linkedin")

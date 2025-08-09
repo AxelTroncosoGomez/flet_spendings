@@ -140,3 +140,65 @@ class InputComponent(ft.Container):
 	def set_value(self, new_value):
 		self.input_field.value = new_value
 
+	def set_error(self, error_msg):
+		self.content = ft.Container(
+			padding = 0,
+			margin = 0,
+			height = 40,
+			border = ft.border.only(
+				bottom=ft.border.BorderSide(1, "#DC3E42")
+			),
+			content = ft.Column(
+				spacing = 0,
+				tight=True,
+				controls = [
+					ft.Row(
+						spacing=10,
+						vertical_alignment=ft.CrossAxisAlignment.CENTER,
+						controls=[
+							ft.Icon(
+								name = self.icon,
+								opacity = 0.85,
+								color = "#DC3E42"
+							),
+							self.input_field,
+						]
+					),
+					ft.Text(
+						error_msg,
+						color = "#DC3E42",
+		                size=14,
+		                height=16,
+		                offset=ft.Offset(0, -0.3)
+					)
+				]
+			)
+		)
+		self.update()
+
+	def reset(self):
+		self.content = ft.Container(
+			padding = 0,
+			margin = 0,
+			height = 40,
+			border = ft.border.only(
+				bottom=ft.border.BorderSide(1, "white54")
+			),
+			content = ft.Column(
+				spacing = 0,
+				controls = [
+					ft.Row(
+						spacing=10,
+						vertical_alignment=ft.CrossAxisAlignment.CENTER,
+						controls=[
+							self.input_icon,
+							self.input_field,
+						]
+					),
+				]
+			)
+		)
+		self.update()
+
+
+
