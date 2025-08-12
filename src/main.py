@@ -17,6 +17,7 @@ from pages.spendings_page import SpendingsPage
 from pages.verify_page import VerifyEmailPage
 from pages.forgot_password_page import ForgotPasswordPage
 from pages.error_page import CrashPage
+from pages.dt_page import NewPage
 from flet.auth.providers import GitHubOAuthProvider
 from utils.logger import logger
 import urllib.request
@@ -101,7 +102,8 @@ def main(page: ft.Page):
 		page.views.append(CrashPage(page, error_message))
 		page.go("/error")
 		return
-		
+	
+	# new_page = NewPage(page)
 	login_page = LoginPage(page, supabase)
 	register_page = RegisterPage(page, supabase)
 	verify_page = VerifyEmailPage(page, supabase)
@@ -147,11 +149,14 @@ def main(page: ft.Page):
 			page.views.append(verify_page)
 		elif page.route == "/forgotpassword":
 			page.views.append(forgot_password_page)
+		# elif page.route == "/new":
+		# 	page.views.append(new_page)
 		page.update()
 
 	page.window.on_event = window_event
 	page.on_route_change = route_change
 	page.go("/login")
+	# page.go("/new")
 
 ft.app(
 	target=main,
