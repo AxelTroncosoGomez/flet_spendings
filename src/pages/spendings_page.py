@@ -30,6 +30,7 @@ from components.dialogs import (
 	sucess_message,
 	error_message
 )
+from components.datatables import DataTableComponent
 
 class SpendingsPage(ft.View):
 	def __init__(self, page: ft.Page, supabase_service):
@@ -71,7 +72,8 @@ class SpendingsPage(ft.View):
 			label="Price",
 		)
 
-		self.table_view = ft.DataTable(
+		# Create the base DataTable for the DataTableComponent
+		self.base_datatable = ft.DataTable(
 			columns=[
 				ft.DataColumn(ft.Text("Date")),
 				ft.DataColumn(ft.Text("Store")),
@@ -85,6 +87,11 @@ class SpendingsPage(ft.View):
 			data_row_color={"hovered": "0x30FF0000"},
 			divider_thickness=0,
 			show_bottom_border=True,
+		)
+
+		# Create the DataTableComponent with pagination
+		self.table_view = DataTableComponent(
+			datatable=self.base_datatable
 		)
 
 		self.confirm_logout_dlg = ft.AlertDialog(
@@ -267,9 +274,16 @@ class SpendingsPage(ft.View):
 
 	def refresh_datatable(self, e):
 		logger.debug("refreshing Datatable from Supabase ...")
-		self.table_view.rows = []
+		self.base_datatable.rows = []
 		self._sync_get_from_db()
-		self.table_view.update()
+		# Update the DataTableComponent
+		self.table_view.datatable = self.base_datatable
+		self.table_view.num_rows = len(self.base_datatable.rows)
+		# Recalculate pagination
+		p_int, p_add = divmod(self.table_view.num_rows, self.table_view.rows_per_page)
+		self.table_view.num_pages = p_int + (1 if p_add else 0)
+		self.table_view.refresh_data()
+		self.page.update()
 
 	def _sync_init_user(self):
 		logger.debug("Starting _sync_init_user")
@@ -303,7 +317,7 @@ class SpendingsPage(ft.View):
 		# ic(self.current_data)
 		for row in self.current_data:
 			# logger.debug(f"Adding row: {row} to DataTable")
-			self.table_view.rows.append(
+			self.base_datatable.rows.append(
 				self._create_data_row(
 					item_id = row["item_id"], 
 					date = row["date"], 
@@ -322,7 +336,7 @@ class SpendingsPage(ft.View):
 		ic(self.current_data)
 		for row in self.current_data:
 			logger.debug(f"Adding row: {row} to DataTable")
-			self.table_view.rows.append(
+			self.base_datatable.rows.append(
 				self._create_data_row(
 					item_id = row["item_id"], 
 					date = row["date"], 
@@ -402,7 +416,7 @@ class SpendingsPage(ft.View):
 		}
 
 		new_rows = []
-		for row in self.table_view.rows:
+		for row in self.base_datatable.rows:
 			if row.data == self.current_entry_id:
 				row.cells[0].content.value = new_date
 				row.cells[1].content.value = new_store
@@ -411,9 +425,11 @@ class SpendingsPage(ft.View):
 				row.cells[4].content.value = new_price
 			new_rows.append(row)
 
-		self.table_view.rows = new_rows
-		# After modifying rows, update the UI
-		self.table_view.update()		
+		self.base_datatable.rows = new_rows
+		# Update the DataTableComponent
+		self.table_view.datatable = self.base_datatable
+		self.table_view.refresh_data()
+		self.page.update()		
 
 		logger.debug(f"Editing item for user: {self.user.id}")
 		ic(updated_item)
@@ -437,12 +453,18 @@ class SpendingsPage(ft.View):
 		price = float(self.input_price.input_value)
 
 		filtered_rows = [
-			row for row in self.table_view.rows
+			row for row in self.base_datatable.rows
 			if row.data != self.current_entry_id
 		]
-		self.table_view.rows = filtered_rows
-		# After modifying rows, update the UI
-		self.table_view.update()
+		self.base_datatable.rows = filtered_rows
+		# Update the DataTableComponent
+		self.table_view.datatable = self.base_datatable
+		self.table_view.num_rows = len(self.base_datatable.rows)
+		# Recalculate pagination
+		p_int, p_add = divmod(self.table_view.num_rows, self.table_view.rows_per_page)
+		self.table_view.num_pages = p_int + (1 if p_add else 0)
+		self.table_view.refresh_data()
+		self.page.update()
 
 		logger.debug(f"Deliting row {self.current_entry_id} from user {self.user.id}")
 		response = self.supabase_service.delete(self.current_entry_id)
@@ -498,7 +520,7 @@ class SpendingsPage(ft.View):
 			self.input_price.set_error("Please type a numeric value")
 			raise InvalidInputException("Please type a numeric value on Price")
 
-		self.table_view.rows.append(
+		self.base_datatable.rows.append(
 			self._create_data_row(
 				item_id = item_id, 
 				date = date, 
@@ -508,6 +530,15 @@ class SpendingsPage(ft.View):
 				price = price
 			)
 		)
+
+		# Update the DataTableComponent
+		self.table_view.datatable = self.base_datatable
+		self.table_view.num_rows = len(self.base_datatable.rows)
+		# Recalculate pagination
+		p_int, p_add = divmod(self.table_view.num_rows, self.table_view.rows_per_page)
+		self.table_view.num_pages = p_int + (1 if p_add else 0)
+		self.table_view.refresh_data()
+		self.page.update()
 
 		new_item = {
 			"item_id": item_id,
