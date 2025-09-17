@@ -273,17 +273,23 @@ class SpendingsPage(ft.View):
 		#     ).subscribe()
 
 	def refresh_datatable(self, e):
-		logger.debug("refreshing Datatable from Supabase ...")
-		self.base_datatable.rows = []
-		self._sync_get_from_db()
-		# Update the DataTableComponent
-		self.table_view.datatable = self.base_datatable
-		self.table_view.num_rows = len(self.base_datatable.rows)
-		# Recalculate pagination
-		p_int, p_add = divmod(self.table_view.num_rows, self.table_view.rows_per_page)
-		self.table_view.num_pages = p_int + (1 if p_add else 0)
-		self.table_view.refresh_data()
-		self.page.update()
+		try:
+			logger.debug("refreshing Datatable from Supabase ...")
+			# Clear existing data and reset pagination
+			self.base_datatable.rows = []
+			self.table_view.datatable = self.base_datatable
+			self.table_view.num_rows = 0
+			self.table_view.num_pages = 0
+			self.table_view.current_page = 1
+
+			# Reload data from database
+			self._sync_get_from_db()
+			self.page.update()
+		except Exception as err:
+			logger.error(f"Error refreshing datatable: {err}")
+			from components.dialogs import error_message
+			error_message(self.page, f"Error refreshing data: {str(err)}")
+			self.page.update()
 
 	def _sync_init_user(self):
 		logger.debug("Starting _sync_init_user")
@@ -302,6 +308,8 @@ class SpendingsPage(ft.View):
 		ic(self.user)
 		logger.debug(f"On SpendingsPage with user: {self.user.id} -> {type(self.user.id)}")
 		self._sync_get_from_db()
+		# Update the page to show the loaded data
+		self.page.update()
 
 	async def _async_init_user(self):
 		user_response = await self.supabase_service.supabase_client.auth.get_user()
@@ -319,14 +327,23 @@ class SpendingsPage(ft.View):
 			# logger.debug(f"Adding row: {row} to DataTable")
 			self.base_datatable.rows.append(
 				self._create_data_row(
-					item_id = row["item_id"], 
-					date = row["date"], 
-					store = row["store"], 
-					product = row["product"], 
-					amount = row["amount"], 
+					item_id = row["item_id"],
+					date = row["date"],
+					store = row["store"],
+					product = row["product"],
+					amount = row["amount"],
 					price = row["price"],
 				)
 			)
+
+		# Update the DataTableComponent with the loaded data
+		self.table_view.datatable = self.base_datatable
+		self.table_view.num_rows = len(self.base_datatable.rows)
+		# Recalculate pagination
+		p_int, p_add = divmod(self.table_view.num_rows, self.table_view.rows_per_page)
+		self.table_view.num_pages = p_int + (1 if p_add else 0)
+		self.table_view.refresh_data()
+		logger.debug(f"Loaded {len(self.base_datatable.rows)} rows from database")
 
 	async def _async_get_from_db(self):
 		logger.debug("Starting coroutine _async_get_from_db()")
@@ -338,14 +355,23 @@ class SpendingsPage(ft.View):
 			logger.debug(f"Adding row: {row} to DataTable")
 			self.base_datatable.rows.append(
 				self._create_data_row(
-					item_id = row["item_id"], 
-					date = row["date"], 
-					store = row["store"], 
-					product = row["product"], 
-					amount = row["amount"], 
+					item_id = row["item_id"],
+					date = row["date"],
+					store = row["store"],
+					product = row["product"],
+					amount = row["amount"],
 					price = row["price"],
 				)
 			)
+
+		# Update the DataTableComponent with the loaded data
+		self.table_view.datatable = self.base_datatable
+		self.table_view.num_rows = len(self.base_datatable.rows)
+		# Recalculate pagination
+		p_int, p_add = divmod(self.table_view.num_rows, self.table_view.rows_per_page)
+		self.table_view.num_pages = p_int + (1 if p_add else 0)
+		self.table_view.refresh_data()
+		logger.debug(f"Loaded {len(self.base_datatable.rows)} rows from database")
 
 	def reset_dialog_entries(self):
 		self.input_date.set_value(datetime.now().date().strftime("%d-%m-%Y"))
@@ -372,213 +398,256 @@ class SpendingsPage(ft.View):
 		)
 
 	def open_new_entry_dialog(self, e):
-		e.control.page.overlay.append(self.dlg_modal)
-		self.dlg_modal.open = True
-		e.control.page.update()
+		try:
+			self.page.overlay.append(self.dlg_modal)
+			self.dlg_modal.open = True
+			self.page.update()
+		except Exception as err:
+			logger.error(f"Error opening new entry dialog: {err}")
+			self.page.update()
 
 	def close_new_entry_dialog(self, e):
-		self.dlg_modal.open = False
-		e.control.page.update()
+		try:
+			self.dlg_modal.open = False
+			self.page.update()
+		except Exception as err:
+			logger.error(f"Error closing new entry dialog: {err}")
+			self.page.update()
 
 	def _handle_row_selection(self, e):
-		cell_content = [cell.content.value for cell in e.control.cells]
-		logger.debug(f"Row selection changed. Selected: {cell_content} with id {e.control.data}")
+		try:
+			cell_content = [cell.content.value for cell in e.control.cells]
+			logger.debug(f"Row selection changed. Selected: {cell_content} with id {e.control.data}")
 
-		self.current_entry_id = e.control.data
+			self.current_entry_id = e.control.data
 
-		self.input_date.set_value(cell_content[0])
-		self.input_store.set_value(cell_content[1])
-		self.input_product.set_value(cell_content[2])
-		self.input_amount.set_value(cell_content[3])
-		self.input_price.set_value(cell_content[4])
+			self.input_date.set_value(cell_content[0])
+			self.input_store.set_value(cell_content[1])
+			self.input_product.set_value(cell_content[2])
+			self.input_amount.set_value(cell_content[3])
+			self.input_price.set_value(cell_content[4])
 
-		e.control.page.overlay.append(self.dlg_edit_modal)
-		self.dlg_edit_modal.open = True
-		e.control.page.update()
+			self.page.overlay.append(self.dlg_edit_modal)
+			self.dlg_edit_modal.open = True
+			self.page.update()
+		except Exception as err:
+			logger.error(f"Error handling row selection: {err}")
+			self.page.update()
 
 	def edit_spending(self, e):
-		logger.debug(f"Current item ID: {self.current_entry_id}")
+		try:
+			logger.debug(f"Current item ID: {self.current_entry_id}")
 
-		new_date = self.input_date.input_value
-		new_store = self.input_store.input_value
-		new_product = self.input_product.input_value
-		new_amount = int(self.input_amount.input_value)
-		new_price = float(self.input_price.input_value)
+			new_date = self.input_date.input_value
+			new_store = self.input_store.input_value
+			new_product = self.input_product.input_value
+			new_amount = int(self.input_amount.input_value)
+			new_price = float(self.input_price.input_value)
 
-		updated_item = {
-			"item_id": self.current_entry_id,
-			"user_id": self.user.id,
-			"date": new_date,
-			"store": new_store,
-			"product": new_product,
-			"amount": new_amount,
-			"price": new_price
-		}
+			updated_item = {
+				"item_id": self.current_entry_id,
+				"user_id": self.user.id,
+				"date": new_date,
+				"store": new_store,
+				"product": new_product,
+				"amount": new_amount,
+				"price": new_price
+			}
 
-		new_rows = []
-		for row in self.base_datatable.rows:
-			if row.data == self.current_entry_id:
-				row.cells[0].content.value = new_date
-				row.cells[1].content.value = new_store
-				row.cells[2].content.value = new_product
-				row.cells[3].content.value = new_amount
-				row.cells[4].content.value = new_price
-			new_rows.append(row)
+			new_rows = []
+			for row in self.base_datatable.rows:
+				if row.data == self.current_entry_id:
+					row.cells[0].content.value = new_date
+					row.cells[1].content.value = new_store
+					row.cells[2].content.value = new_product
+					row.cells[3].content.value = new_amount
+					row.cells[4].content.value = new_price
+				new_rows.append(row)
 
-		self.base_datatable.rows = new_rows
-		# Update the DataTableComponent
-		self.table_view.datatable = self.base_datatable
-		self.table_view.refresh_data()
-		self.page.update()		
+			self.base_datatable.rows = new_rows
+			# Update the DataTableComponent
+			self.table_view.datatable = self.base_datatable
+			self.table_view.refresh_data()
 
-		logger.debug(f"Editing item for user: {self.user.id}")
-		ic(updated_item)
+			logger.debug(f"Editing item for user: {self.user.id}")
+			ic(updated_item)
 
-		response = self.supabase_service.update(
-			item_id = self.current_entry_id,
-			update_value = updated_item
-		)
-		logger.debug(response)
+			response = self.supabase_service.update(
+				item_id = self.current_entry_id,
+				update_value = updated_item
+			)
+			logger.debug(response)
 
-		self.reset_dialog_entries()
-		self.close_edit_entry_dialog(e)
+			self.reset_dialog_entries()
+			self.close_edit_entry_dialog(e)
+		except Exception as err:
+			logger.error(f"Error editing spending: {err}")
+			from components.dialogs import error_message
+			error_message(self.page, f"Error editing spending: {str(err)}")
+			self.page.update()
 
 	def delete_spending(self, e):
-		logger.debug(f"Current entry ID: {self.current_entry_id}")
+		try:
+			logger.debug(f"Current entry ID: {self.current_entry_id}")
 
-		date = self.input_date.input_value
-		store = self.input_store.input_value
-		product = self.input_product.input_value
-		amount = int(self.input_amount.input_value)
-		price = float(self.input_price.input_value)
+			filtered_rows = [
+				row for row in self.base_datatable.rows
+				if row.data != self.current_entry_id
+			]
+			self.base_datatable.rows = filtered_rows
+			# Update the DataTableComponent
+			self.table_view.datatable = self.base_datatable
+			self.table_view.num_rows = len(self.base_datatable.rows)
+			# Recalculate pagination
+			p_int, p_add = divmod(self.table_view.num_rows, self.table_view.rows_per_page)
+			self.table_view.num_pages = p_int + (1 if p_add else 0)
+			self.table_view.refresh_data()
 
-		filtered_rows = [
-			row for row in self.base_datatable.rows
-			if row.data != self.current_entry_id
-		]
-		self.base_datatable.rows = filtered_rows
-		# Update the DataTableComponent
-		self.table_view.datatable = self.base_datatable
-		self.table_view.num_rows = len(self.base_datatable.rows)
-		# Recalculate pagination
-		p_int, p_add = divmod(self.table_view.num_rows, self.table_view.rows_per_page)
-		self.table_view.num_pages = p_int + (1 if p_add else 0)
-		self.table_view.refresh_data()
-		self.page.update()
+			logger.debug(f"Deleting row {self.current_entry_id} from user {self.user.id}")
+			response = self.supabase_service.delete(self.current_entry_id)
+			logger.debug(response)
 
-		logger.debug(f"Deliting row {self.current_entry_id} from user {self.user.id}")
-		response = self.supabase_service.delete(self.current_entry_id)
-		logger.debug(response)
-
-		self.reset_dialog_entries()
-		self.close_edit_entry_dialog(e)
+			self.reset_dialog_entries()
+			self.close_edit_entry_dialog(e)
+		except Exception as err:
+			logger.error(f"Error deleting spending: {err}")
+			from components.dialogs import error_message
+			error_message(self.page, f"Error deleting spending: {str(err)}")
+			self.page.update()
 
 	def close_edit_entry_dialog(self, e):
-		self.reset_dialog_entries()
-		self.dlg_edit_modal.open = False
-		e.control.page.update()
+		try:
+			self.reset_dialog_entries()
+			self.dlg_edit_modal.open = False
+			self.page.update()
+		except Exception as err:
+			logger.error(f"Error closing edit dialog: {err}")
+			self.page.update()
 
 	def add_new_spending(self, e):
-		item_id = str(uuid.uuid4())
-		logger.debug(f"New item ID: {item_id} -> {type(item_id)}")
-		# Get the current values
-		self.input_date.set_value(datetime.now().date().strftime("%d-%m-%Y"))
+		try:
+			item_id = str(uuid.uuid4())
+			logger.debug(f"New item ID: {item_id} -> {type(item_id)}")
+			# Get the current values
+			self.input_date.set_value(datetime.now().date().strftime("%d-%m-%Y"))
 
-		date = self.input_date.input_value
-		if (date == "") or (date is None):
-			self.input_date.set_error("Date field is empty")
-			raise InputNotFilledException("Please complete all the fields")
-		store = self.input_store.input_value
-		if (store == ""):
-			self.input_store.set_error("Store field is empty")
-			raise InputNotFilledException("Please complete all the fields")
-		else:
-			self.input_store.reset()
-		product = self.input_product.input_value
-		if (product == ""):
-			self.input_product.set_error("Product field is empty")
-		else:
-			self.input_product.reset()
-		try:
-			amount = int(self.input_amount.input_value)
-			if amount <= 0.:
-				self.input_amount.set_error("Amount must be greater than 0")
-				raise InvalidInputException("Please type a numeric value on Amount")
+			date = self.input_date.input_value
+			if (date == "") or (date is None):
+				self.input_date.set_error("Date field is empty")
+				raise InputNotFilledException("Please complete all the fields")
+			store = self.input_store.input_value
+			if (store == ""):
+				self.input_store.set_error("Store field is empty")
+				raise InputNotFilledException("Please complete all the fields")
 			else:
-				self.input_amount.reset()
-		except ValueError as err:
-			self.input_price.set_error("Please type a numeric value")
-			raise InvalidInputException("Please type a numeric value on Amount")
-		try:
-			price = float(self.input_price.input_value)
-			if price <= 0.:
+				self.input_store.reset()
+			product = self.input_product.input_value
+			if (product == ""):
+				self.input_product.set_error("Product field is empty")
+				raise InputNotFilledException("Please complete all the fields")
+			else:
+				self.input_product.reset()
+			try:
+				amount = int(self.input_amount.input_value)
+				if amount <= 0.:
+					self.input_amount.set_error("Amount must be greater than 0")
+					raise InvalidInputException("Please type a numeric value on Amount")
+				else:
+					self.input_amount.reset()
+			except ValueError:
 				self.input_amount.set_error("Please type a numeric value")
+				raise InvalidInputException("Please type a numeric value on Amount")
+			try:
+				price = float(self.input_price.input_value)
+				if price <= 0.:
+					self.input_price.set_error("Please type a numeric value")
+					raise InvalidInputException("Please type a numeric value on Price")
+				else:
+					self.input_price.reset()
+			except ValueError:
+				self.input_price.set_error("Please type a numeric value")
 				raise InvalidInputException("Please type a numeric value on Price")
-			else:
-				self.input_price.reset()
-		except ValueError as err:
-			self.input_price.set_error("Please type a numeric value")
-			raise InvalidInputException("Please type a numeric value on Price")
 
-		self.base_datatable.rows.append(
-			self._create_data_row(
-				item_id = item_id, 
-				date = date, 
-				store = store, 
-				product = product, 
-				amount = amount, 
-				price = price
+			self.base_datatable.rows.append(
+				self._create_data_row(
+					item_id = item_id,
+					date = date,
+					store = store,
+					product = product,
+					amount = amount,
+					price = price
+				)
 			)
-		)
 
-		# Update the DataTableComponent
-		self.table_view.datatable = self.base_datatable
-		self.table_view.num_rows = len(self.base_datatable.rows)
-		# Recalculate pagination
-		p_int, p_add = divmod(self.table_view.num_rows, self.table_view.rows_per_page)
-		self.table_view.num_pages = p_int + (1 if p_add else 0)
-		self.table_view.refresh_data()
-		self.page.update()
+			# Update the DataTableComponent
+			self.table_view.datatable = self.base_datatable
+			self.table_view.num_rows = len(self.base_datatable.rows)
+			# Recalculate pagination
+			p_int, p_add = divmod(self.table_view.num_rows, self.table_view.rows_per_page)
+			self.table_view.num_pages = p_int + (1 if p_add else 0)
+			self.table_view.refresh_data()
 
-		new_item = {
-			"item_id": item_id,
-			"user_id": self.user.id,
-			"date": date,
-			"store": store,
-			"product": product,
-			"amount": amount,
-			"price": price
-		}
+			new_item = {
+				"item_id": item_id,
+				"user_id": self.user.id,
+				"date": date,
+				"store": store,
+				"product": product,
+				"amount": amount,
+				"price": price
+			}
 
-		logger.debug("Adding a new item ...")
-		ic(new_item)
-		response = self.supabase_service.insert(
-			new_value = new_item
-		)
-		logger.debug(response)
+			logger.debug("Adding a new item ...")
+			ic(new_item)
+			response = self.supabase_service.insert(
+				new_value = new_item
+			)
+			logger.debug(response)
 
-		self.reset_dialog_entries()
-		self.close_new_entry_dialog(e)
+			self.reset_dialog_entries()
+			self.close_new_entry_dialog(e)
+		except (InputNotFilledException, InvalidInputException) as validation_err:
+			logger.warning(f"Validation error: {validation_err}")
+			from components.dialogs import error_message
+			error_message(self.page, str(validation_err))
+			self.page.update()
+		except Exception as err:
+			logger.error(f"Error adding spending: {err}")
+			from components.dialogs import error_message
+			error_message(self.page, f"Error adding spending: {str(err)}")
+			self.page.update()
 
 	def handle_logout_user(self, e):
-		e.control.page.overlay.append(self.confirm_logout_dlg)
-		self.confirm_logout_dlg.open = True
-		e.control.page.update()
+		try:
+			self.page.overlay.append(self.confirm_logout_dlg)
+			self.confirm_logout_dlg.open = True
+			self.page.update()
+		except Exception as err:
+			logger.error(f"Error opening logout dialog: {err}")
+			self.page.update()
 
 	def yes_click(self, e):
-		self.confirm_logout_dlg.open = False
-		e.control.page.update()
-		
-		# Perform logout
-		self.supabase_service.handle_logout()
-		
-		# Clear session data
-		self.page.session.clear()
-		
-		# Force a full page reload
-		self.page.views.clear()
-		self.page.go("/login")
+		try:
+			self.confirm_logout_dlg.open = False
+			self.page.update()
+
+			# Perform logout
+			self.supabase_service.handle_logout()
+
+			# Clear session data
+			self.page.session.clear()
+
+			# Force a full page reload
+			self.page.views.clear()
+			self.page.go("/login")
+		except Exception as err:
+			logger.error(f"Error during logout: {err}")
+			self.page.update()
 
 	def close_confirm_logout_dialog(self, e):
-		self.confirm_logout_dlg.open = False
-		e.control.page.update()
+		try:
+			self.confirm_logout_dlg.open = False
+			self.page.update()
+		except Exception as err:
+			logger.error(f"Error closing logout dialog: {err}")
+			self.page.update()

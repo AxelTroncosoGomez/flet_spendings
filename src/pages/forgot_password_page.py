@@ -113,19 +113,19 @@ class ForgotPasswordPage(ft.View):
 			)
 			ic(response)
 
-			self.page.open(sucess_message("An email was send to you to change your password."))
+			self.page.open(sucess_message("An email was send to you to change your password.", page=self.page))
 			self.page.update()
 
 		except InputNotFilledException as err:
-			self.page.open(error_message(err))
+			self.page.open(error_message(err, page=self.page))
 		except EmailNotValidException as err:
 			# logger.error(type(err).__name__)
 			# logger.error(err)
-			self.page.open(error_message("Invalid email format"))
+			self.page.open(error_message("Invalid email format", page=self.page))
 		except GenericException as err:
-			self.page.open(error_message(err))
+			self.page.open(error_message(err, page=self.page))
 		except Exception as err:
-			self.page.open(error_message(err))
+			self.page.open(error_message(err, page=self.page))
 
 	def go_to_login(self, e):
 		self.page.go("/login")

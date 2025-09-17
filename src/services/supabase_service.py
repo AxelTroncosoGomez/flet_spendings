@@ -29,7 +29,8 @@ from exceptions import (
 	SupabaseRLSViolationException,
 	SupabaseDuplicateKeyConstraintException,
 	SupabaseNullValueInsertionException,
-	InvalidCredentialsException
+	InvalidCredentialsException,
+	UserNotLoggedException
 )
 
 logger.debug(f"Supabase version: {supabase.__version__}")
