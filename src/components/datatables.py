@@ -23,10 +23,13 @@ class DataTableComponent(ft.Container):
 		p_int, p_add = divmod(self.num_rows, self.rows_per_page)
 		self.num_pages = p_int + (1 if p_add else 0)
 
-		self.v_current_page = ft.Text(
-			str(self.current_page),
-			tooltip="Double click to set current page.",
-			weight=ft.FontWeight.BOLD
+		self.v_current_page = ft.GestureDetector(
+			content=ft.Text(
+				str(self.current_page),
+				tooltip="Double click to set current page.",
+				weight=ft.FontWeight.BOLD
+			),
+			on_double_tap=self.toggle_page_field
 		)
 		
 		self.shown_datatable = ft.DataTable(
@@ -44,7 +47,8 @@ class DataTableComponent(ft.Container):
 			dense=True,
 			filled=False,
 			width=40,
-			on_submit=lambda e: self.set_page(page=e.control.value),
+			on_submit=self.on_page_field_submit,
+			on_blur=self.hide_page_field,
 			visible=False,
 			keyboard_type=ft.KeyboardType.NUMBER,
 			content_padding=2,
@@ -95,6 +99,12 @@ class DataTableComponent(ft.Container):
 							ft.Row(
 								controls = [
 									self.v_num_of_row_changer_field, ft.Text("rows per page")
+								]
+							),
+							ft.Stack(
+								controls=[
+									self.v_current_page,
+									self.current_page_changer_field
 								]
 							),
 							self.v_count,
@@ -197,11 +207,65 @@ class DataTableComponent(ft.Container):
 		# display the total number of rows in the table.
 		self.v_count.value = f"Total Rows: {self.num_rows}"
 		# the current page number versus the total number of pages.
-		self.v_current_page.value = f"{self.current_page}/{self.num_pages}"
+		self.v_current_page.content.value = f"{self.current_page}/{self.num_pages}"
 
 		# update the visibility of controls in the gesture detector
 		self.current_page_changer_field.visible = False
 		self.v_current_page.visible = True
 
 		# update the control so the above changes are rendered in the UI
-		self.update()
+		self._safe_update()
+
+	def _safe_update(self):
+		"""Safely update the component if it's attached to a page."""
+		try:
+			if hasattr(self, '_Control__page') and self._Control__page is not None:
+				self.update()
+		except (AttributeError, AssertionError):
+			# Component not yet added to page, skip update
+			pass
+
+	def toggle_page_field(self, e: ft.ControlEvent):
+		"""Toggle between current page display and page input field."""
+		self.v_current_page.visible = False
+		self.current_page_changer_field.visible = True
+		self.current_page_changer_field.value = str(self.current_page)
+		self._safe_update()
+
+		# Focus on the field if possible
+		try:
+			self.current_page_changer_field.focus()
+		except (AttributeError, AssertionError):
+			pass
+
+	def on_page_field_submit(self, e: ft.ControlEvent):
+		"""Handle page field submission."""
+		self.set_page(page=e.control.value)
+		self.hide_page_field(e)
+
+	def hide_page_field(self, e: ft.ControlEvent):
+		"""Hide the page input field and show current page display."""
+		self.current_page_changer_field.visible = False
+		self.v_current_page.visible = True
+		self._safe_update()
+
+	def update_data(self, new_datatable: ft.DataTable):
+		"""Update the component with new data."""
+		self.datatable = new_datatable
+		self.num_rows = len(self.datatable.rows)
+
+		# Recalculate number of pages
+		p_int, p_add = divmod(self.num_rows, self.rows_per_page)
+		self.num_pages = p_int + (1 if p_add else 0)
+
+		# Reset to first page if current page is now invalid
+		if self.current_page > self.num_pages and self.num_pages > 0:
+			self.current_page = 1
+		elif self.num_pages == 0:
+			self.current_page = 1
+
+		# Update the shown datatable columns
+		self.shown_datatable.columns = self.datatable.columns
+
+		# Refresh the display
+		self.refresh_data()
