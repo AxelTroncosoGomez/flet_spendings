@@ -96,3 +96,7 @@ class SupabaseNullValueInsertionException(Exception):
 
 class InvalidCredentialsException(Exception):
 	pass
+
+
+class UserNotLoggedException(Exception):
+	pass

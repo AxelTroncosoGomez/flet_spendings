@@ -183,28 +183,28 @@ class LoginPage(ft.View):
 			self.page.session.set("user_access_token", response.session.access_token)
 			self.page.session.set("user_refresh_token", response.session.refresh_token)
 
-			self.page.open(sucess_message("Login Sucessfull!"))
+			self.page.open(sucess_message("Login Sucessfull!", page=self.page))
 
 			self.page.go("/spendings")
 			
 			self.clear_input_entries()
 
 		except SupabaseApiException as err:
-			self.page.open(error_message("Unable to connect to server"))
+			self.page.open(error_message("Unable to connect to server", page=self.page))
 		except WrongCredentialsException as err:
-			self.page.open(error_message("Wrong credentials"))
+			self.page.open(error_message("Wrong credentials", page=self.page))
 		except WrongPasswordException as err:
-			self.page.open(error_message("Wrong email or password"))
+			self.page.open(error_message("Wrong email or password", page=self.page))
 		except EmailNotConfirmedException as err:
-			self.page.open(error_message("User email not confirmed"))
+			self.page.open(error_message("User email not confirmed", page=self.page))
 		except UserNotAllowedException as err:
-			self.page.open(error_message("User not allowed"))
+			self.page.open(error_message("User not allowed", page=self.page))
 		except GenericException as err:
-			self.page.open(error_message(f"{type(err).__name__}:{err}"))
+			self.page.open(error_message(f"{type(err).__name__}:{err}", page=self.page))
 		except InvalidCredentialsException as err:
-			self.page.open(error_message("Please provide the email and password"))
+			self.page.open(error_message("Please provide the email and password", page=self.page))
 		except Exception as err:
-			self.page.open(error_message(f"{type(err).__name__}:{err}"))
+			self.page.open(error_message(f"{type(err).__name__}:{err}", page=self.page))
 
 	async def async_handle_user_login(self, e):
 		logger.debug(f"Username: {self.email_input.input_value}")
@@ -222,26 +222,26 @@ class LoginPage(ft.View):
 			self.page.session.set("user_access_token", response.session.access_token)
 			self.page.session.set("user_refresh_token", response.session.refresh_token)
 
-			self.page.open(sucess_message("Login Sucessfull!"))
+			self.page.open(sucess_message("Login Sucessfull!", page=self.page))
 
 			self.page.go("/spendings")
 			
 			self.clear_input_entries()
 
 		except SupabaseApiException as err:
-			self.page.open(error_message("Unable to connect to server"))
+			self.page.open(error_message("Unable to connect to server", page=self.page))
 		except WrongCredentialsException as err:
-			self.page.open(error_message("Wrong credentials"))
+			self.page.open(error_message("Wrong credentials", page=self.page))
 		except WrongPasswordException as err:
-			self.page.open(error_message("Wrong email or password"))
+			self.page.open(error_message("Wrong email or password", page=self.page))
 		except EmailNotConfirmedException as err:
-			self.page.open(error_message("User email not confirmed"))
+			self.page.open(error_message("User email not confirmed", page=self.page))
 		except UserNotAllowedException as err:
-			self.page.open(error_message("User not allowed"))
+			self.page.open(error_message("User not allowed", page=self.page))
 		except GenericException as err:
-			self.page.open(error_message(f"{type(err).__name__}:{err}"))
+			self.page.open(error_message(f"{type(err).__name__}:{err}", page=self.page))
 		except Exception as err:
-			self.page.open(error_message(f"{type(err).__name__}:{err}"))
+			self.page.open(error_message(f"{type(err).__name__}:{err}", page=self.page))
 
 	def go_to_sign_up(self, e):
 		logger.debug("Sign up!")
@@ -256,7 +256,8 @@ class LoginPage(ft.View):
 		self.page.open(
 			sucess_message(
 				"Sucessfully logged to Google",
-				3000
+				3000,
+				page=self.page
 			)
 		)
 		self.password_input.set_error("Wrong password")
@@ -267,7 +268,8 @@ class LoginPage(ft.View):
 		self.page.open(
 			sucess_message(
 				"Sucessfully logged to Linkedin",
-				3000
+				3000,
+				page=self.page
 			)
 		)
 
@@ -276,7 +278,8 @@ class LoginPage(ft.View):
 		self.page.open(
 			sucess_message(
 				"Sucessfully logged to Microsoft",
-				3000
+				3000,
+				page=self.page
 			)
 		)
 

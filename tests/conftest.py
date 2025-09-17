@@ -10,4 +10,10 @@ def pytest_configure():
 	if env_path.exists():
 		load_dotenv(env_path)
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# Add both the project root and src directory to Python path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+src_dir = os.path.join(project_root, "src")
+
+# Insert src directory first so imports work for tests
+sys.path.insert(0, src_dir)
+sys.path.insert(1, project_root)

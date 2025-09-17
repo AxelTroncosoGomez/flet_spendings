@@ -1,7 +1,7 @@
 import pytest
 import flet as ft
 from unittest.mock import Mock, patch
-from src.components.datatables import DataTableComponent
+from components.datatables import DataTableComponent
 
 
 class TestDataTableComponent:

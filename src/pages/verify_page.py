@@ -157,26 +157,26 @@ If you don't receive any email, you can resend another one by clickin the button
 			)
 			ic(response)
 
-			self.page.open(sucess_message("Verification email resend sucessfully"))
+			self.page.open(sucess_message("Verification email resend sucessfully", page=self.page))
 
 		except UserAlreadyExistsException as err:
-			self.page.open(error_message("Email is already in use"))
+			self.page.open(error_message("Email is already in use", page=self.page))
 		except InputNotFilledException as err:
-			self.page.open(error_message(err))
+			self.page.open(error_message(err, page=self.page))
 		except PasswordNotEqualException as err:
-			self.page.open(error_message(err))
+			self.page.open(error_message(err, page=self.page))
 		except SupabaseApiException as err:
-			self.page.open(error_message("Unable to connect to server"))
+			self.page.open(error_message("Unable to connect to server", page=self.page))
 		except WrongCredentialsException as err:
-			self.page.open(error_message("Wrong credentials"))
+			self.page.open(error_message("Wrong credentials", page=self.page))
 		except EmailNotConfirmedException as err:
-			self.page.open(error_message("User email not confirmed"))
+			self.page.open(error_message("User email not confirmed", page=self.page))
 		except UserNotAllowedException as err:
-			self.page.open(error_message("User not allowed"))
+			self.page.open(error_message("User not allowed", page=self.page))
 		except GenericException as err:
-			self.page.open(error_message(err))
+			self.page.open(error_message(err, page=self.page))
 		except Exception as err:
-			self.page.open(error_message(err))
+			self.page.open(error_message(err, page=self.page))
 
 	def go_to_login(self, e):
 		self.page.go("/login")

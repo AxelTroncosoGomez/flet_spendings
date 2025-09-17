@@ -175,7 +175,7 @@ class RegisterPage(ft.View):
 			# ic(response.user.identities)
 			# ic(response.session)
 
-			self.page.open(sucess_message("Registration Sucessfully!"))
+			self.page.open(sucess_message("Registration Sucessfully!", page=self.page))
 
 			# webbrowser.open("https://axeltroncosogomez.github.io/verify")
 			self.page.go("/verify")
@@ -183,23 +183,23 @@ class RegisterPage(ft.View):
 			self.clear_input_entries()
 
 		except UserAlreadyExistsException as err:
-			self.page.open(error_message("Email is already in use"))
+			self.page.open(error_message("Email is already in use", page=self.page))
 		except InputNotFilledException as err:
-			self.page.open(error_message(err))
+			self.page.open(error_message(err, page=self.page))
 		except PasswordNotEqualException as err:
-			self.page.open(error_message(err))
+			self.page.open(error_message(err, page=self.page))
 		except SupabaseApiException as err:
-			self.page.open(error_message("Unable to connect to server"))
+			self.page.open(error_message("Unable to connect to server", page=self.page))
 		except WrongCredentialsException as err:
-			self.page.open(error_message("Wrong credentials"))
+			self.page.open(error_message("Wrong credentials", page=self.page))
 		except EmailNotConfirmedException as err:
-			self.page.open(error_message("User email not confirmed"))
+			self.page.open(error_message("User email not confirmed", page=self.page))
 		except UserNotAllowedException as err:
-			self.page.open(error_message("User not allowed"))
+			self.page.open(error_message("User not allowed", page=self.page))
 		except GenericException as err:
-			self.page.open(error_message(err))
+			self.page.open(error_message(err, page=self.page))
 		except Exception as err:
-			self.page.open(error_message(err))
+			self.page.open(error_message(err, page=self.page))
 
 	@staticmethod
 	def check_correct_email(value: str) -> Tuple[bool, str]:
