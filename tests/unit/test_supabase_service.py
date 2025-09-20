@@ -114,7 +114,7 @@ class TestSpendingsSupabaseDatabaseClientSetup:
 
     @patch('services.supabase_service.Config')
     @patch('services.supabase_service.create_async_client')
-    @pytest.mark.skip(reason="Async tests require pytest-asyncio")
+    @pytest.mark.asyncio
     async def test_async_client_success(self, mock_create_async_client, mock_config):
         """Test successful async client creation."""
         mock_config.SUPABASE_URL = "https://test.supabase.co"
@@ -131,7 +131,7 @@ class TestSpendingsSupabaseDatabaseClientSetup:
 
     @patch('services.supabase_service.Config')
     @patch('services.supabase_service.create_async_client')
-    @pytest.mark.skip(reason="Async tests require pytest-asyncio")
+    @pytest.mark.asyncio
     async def test_async_client_exception(self, mock_create_async_client, mock_config):
         """Test async client with exception."""
         mock_config.SUPABASE_URL = "https://test.supabase.co"
@@ -161,7 +161,7 @@ class TestSpendingsSupabaseDatabaseAuth:
         mock_client.auth.set_session.assert_called_once_with("access_token", "refresh_token")
         assert result == mock_response
 
-    @pytest.mark.skip(reason="Async tests require pytest-asyncio")
+    @pytest.mark.asyncio
     async def test_async_set_session(self):
         """Test async setting session."""
         mock_client = AsyncMock()
@@ -318,7 +318,7 @@ class TestSpendingsSupabaseDatabaseAuth:
         with pytest.raises(GenericException):
             db.handle_login("test@example.com", "password123")
 
-    @pytest.mark.skip(reason="Async tests require pytest-asyncio")
+    @pytest.mark.asyncio
     async def test_async_handle_login_success(self):
         """Test successful async login."""
         mock_client = AsyncMock()
@@ -476,7 +476,7 @@ class TestSpendingsSupabaseDatabaseCRUD:
         with pytest.raises(UserNotLoggedException):
             db.fetch_all_data()
 
-    @pytest.mark.skip(reason="Async tests require pytest-asyncio")
+    @pytest.mark.asyncio
     async def test_async_fetch_all_data_success(self):
         """Test successful async fetch all data."""
         mock_client = AsyncMock()
@@ -495,7 +495,7 @@ class TestSpendingsSupabaseDatabaseCRUD:
         mock_client.table.assert_called_once_with("spendings")
         assert result == mock_data
 
-    @pytest.mark.skip(reason="Async tests require pytest-asyncio")
+    @pytest.mark.asyncio
     async def test_async_fetch_all_data_user_not_logged(self):
         """Test async fetch all data when user not logged in."""
         db = SpendingsSupabaseDatabase()

@@ -16,7 +16,7 @@ from exceptions import GenericException, SupabaseApiException
 class TestInitAsyncSupabase:
     """Test suite for init_async_supabase function."""
 
-    @pytest.mark.skip(reason="Async tests require pytest-asyncio")
+    @pytest.mark.asyncio
     async def test_init_async_supabase_success(self):
         """Test successful initialization of async Supabase."""
         with patch('main.SpendingsSupabaseDatabase') as mock_db_class:
@@ -29,7 +29,7 @@ class TestInitAsyncSupabase:
             mock_db.async_client.assert_called_once()
             assert result == mock_db
 
-    @pytest.mark.skip(reason="Async tests require pytest-asyncio")
+    @pytest.mark.asyncio
     async def test_init_async_supabase_generic_exception(self):
         """Test init_async_supabase with GenericException."""
         with patch('main.SpendingsSupabaseDatabase') as mock_db_class:
@@ -44,7 +44,7 @@ class TestInitAsyncSupabase:
                 mock_logger.error.assert_called_once()
                 assert "Generic Supabase error" in mock_logger.error.call_args[0][0]
 
-    @pytest.mark.skip(reason="Async tests require pytest-asyncio")
+    @pytest.mark.asyncio
     async def test_init_async_supabase_api_exception(self):
         """Test init_async_supabase with SupabaseApiException."""
         with patch('main.SpendingsSupabaseDatabase') as mock_db_class:
@@ -59,7 +59,7 @@ class TestInitAsyncSupabase:
                 mock_logger.error.assert_called_once()
                 assert "Supabase API error" in mock_logger.error.call_args[0][0]
 
-    @pytest.mark.skip(reason="Async tests require pytest-asyncio")
+    @pytest.mark.asyncio
     async def test_init_async_supabase_unexpected_exception(self):
         """Test init_async_supabase with unexpected exception."""
         with patch('main.SpendingsSupabaseDatabase') as mock_db_class:
