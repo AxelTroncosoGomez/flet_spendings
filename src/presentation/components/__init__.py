@@ -1,10 +1,9 @@
 """Presentation layer components module."""
 
-from .base_component import BaseComponent, BaseFormComponent, BasePageComponent, BaseDialogComponent
+from .responsive_appbar import ResponsiveAppBar
+from .sidebar import Sidebar
 
 __all__ = [
-    "BaseComponent",
-    "BaseFormComponent",
-    "BasePageComponent",
-    "BaseDialogComponent"
+    "ResponsiveAppBar",
+    "Sidebar"
 ]

@@ -5,7 +5,7 @@ from utils.config import Config
 
 
 class TestConfig:
-    """Test suite for Config class."""
+    """Test suite for Config class"""
 
     def test_config_class_exists(self):
         """Test that Config class is accessible."""

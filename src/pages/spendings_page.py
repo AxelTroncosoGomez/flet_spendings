@@ -31,6 +31,8 @@ from components.dialogs import (
 	error_message
 )
 from components.datatables import DataTableComponent
+from presentation.components.responsive_appbar import ResponsiveAppBar
+from presentation.components.sidebar import Sidebar
 
 class SpendingsPage(ft.View):
 	def __init__(self, page: ft.Page, supabase_service):
@@ -165,23 +167,19 @@ class SpendingsPage(ft.View):
 			on_click = self.refresh_datatable
 		)
 
-		self.appbar = ft.AppBar(
-			leading=ft.Icon(ft.Icons.PALETTE),
-			leading_width=40,
-			title=ft.Text("AppBar Example"),
-			center_title=False,
-			bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
-			actions=[
-				ft.IconButton(ft.Icons.WB_SUNNY_OUTLINED),
-				ft.IconButton(ft.Icons.FILTER_3),
-				ft.PopupMenuButton(
-					items=[
-						ft.PopupMenuItem(text="Search"),
-						ft.PopupMenuItem(),  # divider
-						ft.PopupMenuItem(text="Settings"),
-					]
-				),
-			],
+		# Create responsive AppBar and Sidebar separately
+		self.drawer = Sidebar(
+			on_home_click=self.handle_home_navigation,
+			on_spendings_click=self.handle_spendings_navigation,
+			on_database_click=self.handle_database_navigation,
+			on_profile_click=self.handle_profile_navigation,
+			on_logout_click=self.handle_logout_user
+		)
+
+		self.appbar = ResponsiveAppBar(
+			title="Spendio",
+			on_menu_click=self.handle_menu_click,
+			on_settings_click=self.handle_settings_click
 		)
 
 		self.controls = [
@@ -244,18 +242,6 @@ class SpendingsPage(ft.View):
 						)
 					]
 				)
-			),
-			ft.Container(
-				padding = 0,
-				margin = 0,												
-				content = ft.Row([
-					ft.FloatingActionButton(
-						icon = ft.Icons.LOGOUT,
-						on_click = self.handle_logout_user, 
-					)
-				], 
-				alignment = ft.MainAxisAlignment.END
-				),
 			),
 		]
 
@@ -650,4 +636,60 @@ class SpendingsPage(ft.View):
 			self.page.update()
 		except Exception as err:
 			logger.error(f"Error closing logout dialog: {err}")
+			self.page.update()
+
+	def handle_menu_click(self, e):
+		"""Handle menu button click to toggle sidebar."""
+		try:
+			# Toggle the drawer state
+			current_drawer_state = getattr(self.drawer, 'open', False)
+			self.drawer.open = not current_drawer_state
+			self.drawer.update()
+		except Exception as err:
+			logger.error(f"Error toggling sidebar: {err}")
+			self.page.update()
+
+	def handle_settings_click(self, e):
+		"""Handle settings menu item click."""
+		try:
+			# For now, just show a simple message
+			from components.dialogs import sucess_message
+			sucess_message(self.page, "Settings functionality coming soon!")
+		except Exception as err:
+			logger.error(f"Error opening settings: {err}")
+			self.page.update()
+
+	def handle_home_navigation(self, e):
+		"""Handle home navigation from sidebar."""
+		try:
+			self.page.go("/home")  # This route would need to be implemented
+		except Exception as err:
+			logger.error(f"Error navigating to home: {err}")
+			self.page.update()
+
+	def handle_spendings_navigation(self, e):
+		"""Handle spendings navigation from sidebar."""
+		try:
+			# Already on spendings page, sidebar will close automatically
+			pass
+		except Exception as err:
+			logger.error(f"Error navigating to spendings: {err}")
+			self.page.update()
+
+	def handle_database_navigation(self, e):
+		"""Handle database navigation from sidebar."""
+		try:
+			from components.dialogs import sucess_message
+			sucess_message(self.page, "Database view coming soon!")
+		except Exception as err:
+			logger.error(f"Error navigating to database: {err}")
+			self.page.update()
+
+	def handle_profile_navigation(self, e):
+		"""Handle profile navigation from sidebar."""
+		try:
+			from components.dialogs import sucess_message
+			sucess_message(self.page, "Profile page coming soon!")
+		except Exception as err:
+			logger.error(f"Error navigating to profile: {err}")
 			self.page.update()

@@ -34,12 +34,14 @@ class LoginPage(ft.View):
 
 		self.email_input = InputComponent(
 			icon = ft.Icons.EMAIL,
+			value = "troncoso.axel.dev@gmail.com",
 			label = "Email",
 			password = False,
 		)
 
 		self.password_input = InputComponent(
 			icon = ft.Icons.LOCK,
+			value = "12345678",
 			label = "Password",
 			password = True
 		)

@@ -11,13 +11,16 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 from services.crud import LocalSpendingsDatabase
 from services.supabase_service import SpendingsSupabaseDatabase
-from pages.login_page import LoginPage  
-from pages.register_page import RegisterPage  
+from pages.login_page import LoginPage
+from pages.register_page import RegisterPage
 from pages.spendings_page import SpendingsPage
 from pages.verify_page import VerifyEmailPage
 from pages.forgot_password_page import ForgotPasswordPage
 from pages.error_page import CrashPage
 from pages.dt_page import NewPage
+from pages.home_page import HomePage
+from pages.database_page import DatabasePage
+from pages.profile_page import ProfilePage
 from flet.auth.providers import GitHubOAuthProvider
 from utils.logger import logger
 import urllib.request
@@ -134,15 +137,29 @@ def main(page: ft.Page):
 
 	def route_change(e):
 		page.views.clear()
+
+		# Initialize current_view variable
+		current_view = None
+
 		if page.route == "/login":
 			page.views.append(login_page)
+		elif page.route == "/home":
+			current_view = HomePage(page, supabase)
+			page.views.append(current_view)
 		elif page.route == "/spendings":
 			# spendings_page = SpendingsPage(page, supabase)
 			# asyncio.run(spendings_page.init_user())
 			# threading.Thread(
 			# 	target = asyncio.run(spendings_page.init_user())
 			# ).start()
-			page.views.append(SpendingsPage(page, supabase))
+			current_view = SpendingsPage(page, supabase)
+			page.views.append(current_view)
+		elif page.route == "/database":
+			current_view = DatabasePage(page, supabase)
+			page.views.append(current_view)
+		elif page.route == "/profile":
+			current_view = ProfilePage(page, supabase)
+			page.views.append(current_view)
 		elif page.route == "/register":
 			page.views.append(register_page)
 		elif page.route == "/verify":
@@ -151,6 +168,16 @@ def main(page: ft.Page):
 			page.views.append(forgot_password_page)
 		# elif page.route == "/new":
 		# 	page.views.append(new_page)
+
+		# Set up drawer and appbar for pages that have them
+		if current_view and hasattr(current_view, 'drawer') and hasattr(current_view, 'appbar'):
+			page.drawer = current_view.drawer
+			page.appbar = current_view.appbar
+		else:
+			# Clear drawer and appbar for pages that don't need them
+			page.drawer = None
+			page.appbar = None
+
 		page.update()
 
 	page.window.on_event = window_event
